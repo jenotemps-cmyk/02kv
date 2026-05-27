@@ -1,0 +1,69 @@
+/* Custom Logo Styling - Red S with Black Background */
+.logo-image,
+.nav-brand-logo {
+  display: none !important;
+}
+
+.logo-fallback-text {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: #000000;
+  color: #ff3048 !important;
+  font-size: 2rem !important;
+  font-weight: 900 !important;
+  border-radius: 12px;
+  border: 2px solid #ff3048;
+  box-shadow: 0 0 20px rgba(255, 48, 72, 0.5);
+  text-shadow: 0 0 8px rgba(255, 48, 72, 0.8);
+  font-family: var(--font), sans-serif;
+}
+
+.nav-brand-logo+.logo-fallback-text {
+  width: 32px;
+  height: 32px;
+  font-size: 1.3rem !important;
+  border-radius: 8px;
+}
+
+.sidebar-brand .logo-fallback-text {
+  margin-right: 8px;
+}
+
+/* Auth card logo */
+.logo-area .logo-fallback-text {
+  width: 70px;
+  height: 70px;
+  font-size: 3rem !important;
+  border-radius: 16px;
+  background: #000000;
+}
+
+/* Range input styling for better visibility */
+.range-wrap input[type="range"] {
+  background: transparent;
+}
+
+/* Additional styling for new controls */
+.setting-row .range-wrap {
+  width: 100%;
+}
+
+.configs-list {
+  max-height: 400px;
+}
+
+/* Number input dark styling */
+.range-value-input {
+  background: #1a1a1a;
+  border: 1px solid #ff3048;
+  color: #ff3048;
+  font-weight: bold;
+}
+
+.range-value-input:focus {
+  border-color: #ff6078;
+  box-shadow: 0 0 10px rgba(255, 48, 72, 0.3);
+}
