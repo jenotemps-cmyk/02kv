@@ -1,0 +1,4 @@
+Hello, {user}
+Welcome back, {user}
+How we doing, {user}
+Time to tap, {user}
