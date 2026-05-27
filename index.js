@@ -13,7 +13,11 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
+const wss = new WebSocket.Server({
+  noServer: true,
+  clientTracking: true,
+  perMessageDeflate: false
+});
 
 // Configuration
 const PORT = process.env.PORT || 3000;
@@ -94,7 +98,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Mode = "Target", 
         TargetKeybind = "C", 
         LockedTarget = nil, 
-        TargetModeForceHit = true, -- Set to true so Target Mode completely ignores the FOV circle once locked
+        TargetModeForceHit = true,
         Smoothing = 0.1, 
         HitChance = 100,
     },
@@ -296,7 +300,9 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
 
     Spiderman = { 
         Enabled = true, 
-        ["Jump Boost"] = 80,["Jump Delay"] = 0, 
+        ["Jump Boost"] = 80,
+        ["Jump Height"] = 80,
+        ["Jump Delay"] = 0, 
         Keybind = "J" 
     },
 
@@ -352,17 +358,34 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
     }
 }`;
 
-// Initialize Supabase Client
+// Initialize Supabase Client with proper WebSocket transport for Node.js 20
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("WARNING: Missing SUPABASE_URL or SUPABASE_KEY in .env. Existing local accounts can log in, but registration/license checks are disabled.");
-}
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey, {
-  realtime: {
-    transport: WebSocket
+
+let supabase = null;
+if (supabaseUrl && supabaseKey) {
+  try {
+    // For Node.js 20, we need to provide the WebSocket transport
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      },
+      // This fixes the WebSocket error by not using realtime features that require native WebSocket
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true
+      }
+    });
+    console.log("Supabase client initialized successfully");
+  } catch (err) {
+    console.warn("WARNING: Supabase initialization failed:", err.message);
+    supabase = null;
   }
-}) : null;
+} else {
+  console.warn("WARNING: Missing SUPABASE_URL or SUPABASE_KEY in .env");
+}
 
 // Middleware
 app.set('trust proxy', 1);
@@ -373,7 +396,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Helmet security headers (configured to allow inline scripts for simplicity in dev, but can be hardened)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -387,10 +409,10 @@ app.use(helmet({
   }
 }));
 
-// Rate Limiter to prevent brute force / DoS
+// Rate Limiter
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.originalUrl.startsWith('/api/connections'),
@@ -398,8 +420,8 @@ const limiter = rateLimit({
 });
 
 const connectionsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Allow frequent connection polling without hitting the auth/config limiter
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many connection status requests. Please wait a moment.' }
@@ -408,7 +430,7 @@ const connectionsLimiter = rateLimit({
 app.use('/api/connections', connectionsLimiter);
 app.use('/api/', limiter);
 
-// Database helper functions (Safe read/writes to database.json)
+// Database helper functions
 function readLocalDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
@@ -431,7 +453,7 @@ function writeLocalDB(data) {
   }
 }
 
-// Auth middleware to secure APIs
+// Auth middleware
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
@@ -443,7 +465,6 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired. Please log in again.' });
     }
 
-    // Check if user is banned in local DB
     const db = readLocalDB();
     const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
     if (!localUser) {
@@ -458,97 +479,19 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// --- WebSocket Connections for Roblox Executors ---
-// Stores mapping of user -> set of WS connections
+// WebSocket Connections
 const clientConnections = new Map();
 const getConnectionKey = (username) => String(username || '').trim().toLowerCase();
 
-// HTTP upgrade handler for WebSocket
-server.on('upgrade', (request, socket, head) => {
-  console.log(`\n[WS Upgrade Attempt] URL: ${request.url}`);
-  console.log(`[WS Upgrade Attempt] IP: ${socket.remoteAddress}`);
-  console.log(`[WS Upgrade Attempt] Headers:`, JSON.stringify(request.headers));
-
-  let token = null;
-
-  // Try parsing cookies first
-  const cookieHeader = request.headers.cookie || '';
-  const cookies = cookieHeader.split(';').reduce((acc, c) => {
-    const parts = c.split('=');
-    if (parts[0]) {
-      acc[parts[0].trim()] = (parts[1] || '').trim();
-    }
-    return acc;
-  }, {});
-  token = cookies.token;
-
-  // Fallback to checking the token in the URL query string manually
-  if (!token && request.url) {
-    const match = request.url.match(/[?&]token=([^&]+)/);
-    if (match) {
-      token = match[1];
-    }
-  }
-
-  // If token is missing, check if this is a local request and we can bypass validation for debugging
-  if (!token) {
-    const isLocal = socket.remoteAddress === '127.0.0.1' || socket.remoteAddress === '::1' || socket.remoteAddress === '::ffff:127.0.0.1';
-
-    if (isLocal) {
-      const db = readLocalDB();
-      let fallbackUsername = null;
-      if (db.length === 1) {
-        fallbackUsername = db[0].username;
-      } else if (db.length > 1 && global.lastActiveUsername) {
-        fallbackUsername = global.lastActiveUsername;
-      }
-
-      if (fallbackUsername) {
-        const localUser = db.find(u => u.username.toLowerCase() === fallbackUsername.toLowerCase());
-        if (localUser && !localUser.banned) {
-          console.log(`[WS Upgrade Bypass] Localhost connection accepted without token for user: ${localUser.username}`);
-          wss.handleUpgrade(request, socket, head, (ws) => {
-            wss.emit('connection', ws, request, localUser.username);
-          });
-          return;
-        }
-      }
-    }
-
-    console.warn(`[WS Upgrade Rejected] Reason: Missing token / no local fallback user.`);
-    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-    socket.destroy();
-    return;
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.warn(`[WS Upgrade Rejected] Reason: JWT verification failed.`);
-      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-      socket.destroy();
-      return;
-    }
-
-    // Verify user is not banned
-    const db = readLocalDB();
-    const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
-    if (!localUser || localUser.banned) {
-      console.warn(`[WS Upgrade Rejected] Reason: User banned or not found.`);
-      socket.write('HTTP/1.1 403 Forbidden - Banned\r\n\r\n');
-      socket.destroy();
-      return;
-    }
-
-    console.log(`[WS Upgrade Approved] Upgrading socket for user: ${localUser.username}`);
-    // Upgrade connection
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request, localUser.username);
-    });
-  });
-});
-
 wss.on('connection', (ws, request, username) => {
-  console.log(`WebSocket client connected for user: ${username}`);
+  console.log(`[WS] Client connected for user: ${username}`);
+
+  ws.isAlive = true;
+  ws.username = username;
+
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
 
   const connectionKey = getConnectionKey(username);
   if (!clientConnections.has(connectionKey)) {
@@ -560,15 +503,19 @@ wss.on('connection', (ws, request, username) => {
   const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
 
   if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({
-      type: 'init',
-      config: localUser.config
-    }));
-    console.log(`Sent initial config to ${username}`);
+    try {
+      ws.send(JSON.stringify({
+        type: 'init',
+        config: localUser.config
+      }));
+      console.log(`[WS] Sent initial config to ${username}`);
+    } catch (err) {
+      console.error(`[WS] Failed to send initial config: ${err.message}`);
+    }
   }
 
-  ws.on('close', () => {
-    console.log(`WebSocket client disconnected for user: ${username}`);
+  ws.on('close', (code, reason) => {
+    console.log(`[WS] Client disconnected for user: ${username}, code: ${code}`);
     const userConns = clientConnections.get(connectionKey);
     if (userConns) {
       userConns.delete(ws);
@@ -579,14 +526,84 @@ wss.on('connection', (ws, request, username) => {
   });
 
   ws.on('error', (err) => {
-    console.error(`WebSocket error for ${username}:`, err);
+    console.error(`[WS] Error for ${username}:`, err.message);
   });
 });
-// Broadcast config updates to a specific user's connected executors
+
+const heartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      console.log(`[WS] Terminating inactive connection for ${ws.username || 'unknown'}`);
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 15000);
+
+wss.on('close', () => {
+  clearInterval(heartbeatInterval);
+});
+
+server.on('upgrade', (request, socket, head) => {
+  console.log(`[WS Upgrade] ${request.url}`);
+
+  let token = null;
+
+  const cookieHeader = request.headers.cookie || '';
+  const cookies = cookieHeader.split(';').reduce((acc, c) => {
+    const parts = c.split('=');
+    if (parts[0]) {
+      acc[parts[0].trim()] = (parts[1] || '').trim();
+    }
+    return acc;
+  }, {});
+  token = cookies.token;
+
+  if (!token && request.url) {
+    const match = request.url.match(/[?&]token=([^&]+)/);
+    if (match) {
+      token = decodeURIComponent(match[1]);
+      console.log(`[WS] Token from URL parameter`);
+    }
+  }
+
+  if (!token) {
+    console.warn(`[WS] No token provided`);
+    socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.warn(`[WS] Invalid token: ${err.message}`);
+      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    const db = readLocalDB();
+    const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
+    if (!localUser || localUser.banned) {
+      console.warn(`[WS] User banned or not found: ${user.username}`);
+      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    console.log(`[WS] Authenticated user: ${localUser.username}`);
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request, localUser.username);
+    });
+  });
+});
+
 function broadcastConfigUpdate(username, config) {
   const connectionKey = getConnectionKey(username);
   const userConns = clientConnections.get(connectionKey);
   let count = 0;
+
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
     userConns.forEach((ws) => {
@@ -595,36 +612,28 @@ function broadcastConfigUpdate(username, config) {
           ws.send(payload);
           count++;
         } catch (err) {
-          console.error(`Failed to send config update to ${username}:`, err);
+          console.error(`[WS] Failed to send update: ${err.message}`);
         }
-      } else {
-        userConns.delete(ws);
       }
     });
-    if (userConns.size === 0) {
-      clientConnections.delete(connectionKey);
-    }
   }
-  console.log(`[Activation] ${username}: sent config update to ${count} open WebSocket connection(s).`);
+
+  console.log(`[Activation] ${username}: sent to ${count} connection(s)`);
   return count;
 }
 
-// --- API Endpoints ---
+// API Endpoints
 
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
     app: 'sacrifice-config-hub',
-    build: 'activate-route-v3-push-endpoint',
-    activateRoute: 'POST /api/config/activate',
-    pushRoute: 'POST /api/config/push',
-    activateHandler: 'shared activation handler registered for activate and push',
     timestamp: new Date().toISOString()
   });
 });
 
 function activateConfigHandler(req, res) {
-  console.log(`[Activation Route Hit] ${req.user.username}`);
+  console.log(`[Activation] ${req.user.username}`);
 
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
@@ -655,7 +664,7 @@ function activateConfigHandler(req, res) {
       user.lastActivatedConfig = configToActivate;
       writeLocalDB(db);
     } catch (err) {
-      console.error(`Failed to persist activated config for ${user.username}:`, err);
+      console.error(`Failed to persist config:`, err);
     }
   });
 }
@@ -664,13 +673,82 @@ app.all('/api/config/activate', authenticateToken, (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Use POST /api/config/activate' });
   }
-
   return activateConfigHandler(req, res);
 });
 
 app.post('/api/config/push', authenticateToken, activateConfigHandler);
 
-// Registration (Sign Up)
+// Get user info from Supabase
+app.get('/api/user/:username', authenticateToken, async (req, res) => {
+  const { username } = req.params;
+
+  if (req.user.username.toLowerCase() !== username.toLowerCase()) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  if (!supabase) {
+    return res.json({
+      discordId: 'Not linked',
+      duration: 'Lifetime'
+    });
+  }
+
+  try {
+    const db = readLocalDB();
+    const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+    if (!user || !user.license) {
+      return res.json({
+        discordId: 'Not linked',
+        duration: 'Lifetime'
+      });
+    }
+
+    const { data: licenseData, error } = await supabase
+      .from('licenses')
+      .select('discordid, duration')
+      .eq('license', user.license)
+      .single();
+
+    if (error || !licenseData) {
+      return res.json({
+        discordId: 'Not linked',
+        duration: 'Lifetime'
+      });
+    }
+
+    res.json({
+      discordId: licenseData.discordid || 'Not linked',
+      duration: licenseData.duration || 'Lifetime'
+    });
+  } catch (err) {
+    console.error('Error fetching user data:', err);
+    res.json({
+      discordId: 'Not linked',
+      duration: 'Lifetime'
+    });
+  }
+});
+
+// Get user's license key
+app.get('/api/user/:username/license', authenticateToken, async (req, res) => {
+  const { username } = req.params;
+
+  if (req.user.username.toLowerCase() !== username.toLowerCase()) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const db = readLocalDB();
+  const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user || !user.license) {
+    return res.json({ licenseKey: null });
+  }
+
+  res.json({ licenseKey: user.license });
+});
+
+// Registration
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, licenseKey } = req.body;
 
@@ -685,14 +763,12 @@ app.post('/api/auth/register', async (req, res) => {
 
   const db = readLocalDB();
 
-  // Check if username is already registered
   const userExists = db.some(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
   if (userExists) {
     return res.status(400).json({ error: 'Username is already taken.' });
   }
 
-  // Check if license is already used by a local account
-  const licenseUsedLocally = db.some(u => u.license.toLowerCase() === licenseKey.toLowerCase().trim());
+  const licenseUsedLocally = db.some(u => u.license && u.license.toLowerCase() === licenseKey.toLowerCase().trim());
   if (licenseUsedLocally) {
     return res.status(400).json({ error: 'License key has already been used!' });
   }
@@ -702,8 +778,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(503).json({ error: 'Registration is unavailable because Supabase is not configured on this server.' });
     }
 
-    // 1. Check if license exists in Supabase
-    // Using select() with eq() filter
     const { data: licenseData, error: fetchErr } = await supabase
       .from('licenses')
       .select('*')
@@ -714,22 +788,18 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'License Invalid!' });
     }
 
-    // 2. Check if key is blacklisted
     if (licenseData.blacklisted) {
       return res.status(400).json({ error: 'License Invalid! Key is blacklisted.' });
     }
 
-    // 3. Check if has discord id
     if (!licenseData.discordid) {
       return res.status(400).json({ error: "Your key hasn't been claimed yet!" });
     }
 
-    // 4. Check if cloudclaimed is true
     if (licenseData.cloudclaimed === true) {
       return res.status(400).json({ error: 'This key has already been used!' });
     }
 
-    // 5. Update cloudclaimed to true in Supabase
     const { error: updateErr } = await supabase
       .from('licenses')
       .update({ cloudclaimed: true })
@@ -740,16 +810,14 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(500).json({ error: 'Failed to update license claim status. Try again later.' });
     }
 
-    // 6. Securely hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 7. Save user in local DB
     const newUser = {
       username: trimmedUsername,
       password: hashedPassword,
       license: licenseKey.trim(),
-      config: DEFAULT_LUA_CONFIG, // Default Sacrifice Lua table configuration
+      config: DEFAULT_LUA_CONFIG,
       banned: false,
       createdAt: new Date().toISOString()
     };
@@ -765,7 +833,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Sign In (Login)
+// Login
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -782,52 +850,44 @@ app.post('/api/auth/login', async (req, res) => {
 
   const user = db[userIndex];
 
-  // If user is already marked banned locally
   if (user.banned) {
     return res.status(403).json({ error: 'Your account is banned!' });
   }
 
-  // Verify password
   const passwordMatch = await bcrypt.compare(password, user.password);
   if (!passwordMatch) {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
   try {
-    // Fetch license status from Supabase to verify blacklist status upon logging in
-    if (supabase) {
+    if (supabase && user.license) {
       const { data: licenseData, error: fetchErr } = await supabase
         .from('licenses')
         .select('*')
         .eq('license', user.license)
         .single();
 
-      if (!fetchErr && licenseData) {
-        if (licenseData.blacklisted) {
-          // BAN account instantly
-          user.banned = true;
-          writeLocalDB(db);
-          return res.status(403).json({ error: 'Your account has been instantly banned due to license blacklisting!' });
-        }
+      if (!fetchErr && licenseData && licenseData.blacklisted) {
+        user.banned = true;
+        writeLocalDB(db);
+        return res.status(403).json({ error: 'Your account has been instantly banned due to license blacklisting!' });
       }
     }
   } catch (err) {
-    console.warn("Failed to check blacklist in Supabase during login. Continuing with caution.", err);
+    console.warn("Failed to check blacklist:", err);
   }
 
-  // Generate JWT token
   const token = jwt.sign(
     { username: user.username },
     JWT_SECRET,
-    { expiresIn: '7d' } // Secure 7 day session duration
+    { expiresIn: '7d' }
   );
 
-  // Set HTTP-Only Cookie for session persistence
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // secure in production (HTTPS)
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    secure: false,
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
   });
 
   global.lastActiveUsername = user.username;
@@ -838,15 +898,14 @@ app.post('/api/auth/login', async (req, res) => {
   });
 });
 
-// Sign Out (Logout)
+// Logout
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('token');
   return res.json({ success: true, message: 'Logged out successfully!' });
 });
 
-// Check Session Status
+// Check Session
 app.get('/api/auth/session', authenticateToken, (req, res) => {
-  // Extract token from cookie to return back to frontend
   const token = req.cookies.token;
   global.lastActiveUsername = req.user.username;
   return res.json({
@@ -868,7 +927,6 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Configuration string is required.' });
   }
 
-  // Validate that config contains the Sacrifice wrapper (allows comments/whitespace and case-insensitive 'sacrifice')
   const match = config.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
   if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
@@ -885,14 +943,13 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
   return res.status(500).json({ error: 'Failed to find user profile.' });
 });
 
-// Return connection count for frontend
+// Connection count
 app.get('/api/connections', authenticateToken, (req, res) => {
   const userConns = clientConnections.get(getConnectionKey(req.user.username));
   return res.json({ count: userConns ? userConns.size : 0 });
 });
 
-// Serve static frontend files from 'public' directory after API routes.
-// Disable caching for this local GUI so browser refreshes always pick up edits.
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
   lastModified: false,
@@ -903,12 +960,13 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// Error-handling fallback
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong on the server!' });
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sacrifice config hub is running on http://localhost:${PORT}`);
+  console.log(`Sacrifice config hub running on http://localhost:${PORT}`);
+  console.log(`WebSocket server ready`);
 });
