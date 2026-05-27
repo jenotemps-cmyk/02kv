@@ -70,12 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const API_BASE = '';
-  const API_ORIGIN = API_BASE || window.location.origin;
   const apiUrl = (path) => `${API_BASE}${path}`;
-  window.SACRIFICE_APP_BUILD = 'app-v20-sacrifice-config-hub';
+  window.SACRIFICE_APP_BUILD = 'app-v23-sacrifice-config-hub';
 
   let activeSessionToken = null;
   let activeUsername = null;
+  let activeLicenseKey = null;
   let connectionCheckInterval = null;
   let activeConfigSection = 'silent';
   let sectionTransitionTimer = null;
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     keyDuration: null
   };
 
-  // --- Saved Configs Storage (localStorage) ---
+  // --- Saved Configs Storage ---
   const CONFIGS_STORAGE_KEY = 'sacrifice_saved_configs';
   const EXECUTIONS_KEY = 'sacrifice_executions';
 
@@ -98,14 +98,11 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(CONFIGS_STORAGE_KEY, JSON.stringify(configs));
   }
 
-  // --- Execution Tracking ---
   function getExecutionCount(username) {
     try {
       const counts = JSON.parse(localStorage.getItem(EXECUTIONS_KEY) || '{}');
       return counts[username] || 0;
-    } catch {
-      return 0;
-    }
+    } catch { return 0; }
   }
 
   function incrementExecutionCount(username) {
@@ -114,1313 +111,1280 @@ document.addEventListener('DOMContentLoaded', () => {
       counts[username] = (counts[username] || 0) + 1;
       localStorage.setItem(EXECUTIONS_KEY, JSON.stringify(counts));
       return counts[username];
-    } catch {
-      return 1;
-    }
+    } catch { return 1; }
   }
 
-  // --- Fetch User Data from Supabase ---
-  async function fetchUserDataFromSupabase(userId) {
+  // --- API Calls ---
+  async function fetchUserDataFromSupabase(username) {
     try {
-      // This assumes your backend has an endpoint that fetches from Supabase
-      const response = await fetch(apiUrl(`/api/user/${userId}`), {
+      const response = await fetch(apiUrl(`/api/user/${username}`), {
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
       });
-
       if (response.ok) {
         const data = await response.json();
         userData.discordId = data.discordId || 'Not linked';
-        userData.keyDuration = data.keyDuration || 'Unlimited';
+        userData.keyDuration = data.duration || 'Lifetime';
+        if (userData.keyDuration && userData.keyDuration !== 'Lifetime') {
+          const days = parseInt(userData.keyDuration);
+          if (!isNaN(days)) userData.keyDuration = `${days} days`;
+        }
         return data;
       }
-    } catch (err) {
-      console.warn('Failed to fetch user data:', err);
-    }
+    } catch (err) { console.warn('Failed to fetch user data:', err); }
     return null;
   }
 
-  // --- Update User Panel Display ---
-  function updateUserPanelDisplay() {
-    if (userDiscordId) userDiscordId.textContent = userData.discordId || '-';
-    if (userKeyDisplay) userKeyDisplay.textContent = activeSessionToken ? activeSessionToken.substring(0, 16) + '...' : '-';
-    if (userKeyDuration) userKeyDuration.textContent = userData.keyDuration || '-';
-    if (userExecutions) userExecutions.textContent = getExecutionCount(activeUsername) || '0';
+  async function fetchLicenseKey(username) {
+    try {
+      const response = await fetch(apiUrl(`/api/user/${username}/license`), {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        activeLicenseKey = data.licenseKey;
+        return activeLicenseKey;
+      }
+    } catch (err) { console.warn('Failed to fetch license key:', err); }
+    return null;
   }
 
-  // --- Branding Logo Management ---
+  function updateUserPanelDisplay() {
+    if (userDiscordId) userDiscordId.textContent = userData.discordId || '-';
+    if (userKeyDisplay && activeLicenseKey) {
+      const masked = activeLicenseKey.substring(0, 8) + '********' + activeLicenseKey.substring(activeLicenseKey.length - 4);
+      userKeyDisplay.textContent = masked;
+    } else if (userKeyDisplay) userKeyDisplay.textContent = '-';
+    if (userKeyDuration) userKeyDuration.textContent = userData.keyDuration || 'Lifetime';
+    if (userExecutions && activeUsername) userExecutions.textContent = getExecutionCount(activeUsername) || '0';
+  }
+
+  // --- Logo Management ---
   function setLogoSource(img, source) {
-    function setLogoSource(img, source, forceText = false) {
-      if (!img) return;
-
-      const fallbackText = img.nextElementSibling;
-
-      // If forceText is true, always show fallback text and hide image
-      if (forceText) {
-        img.style.display = 'none';
-        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
-          fallbackText.style.display = 'inline-block';
-        }
-        return;
+    if (!img) return;
+    const fallbackText = img.nextElementSibling;
+    img.style.display = 'none';
+    if (fallbackText && fallbackText.classList && fallbackText.classList.contains('logo-fallback-text')) {
+      fallbackText.style.display = 'inline-block';
+    }
+    const probe = new Image();
+    probe.onload = () => {
+      img.src = source;
+      img.style.display = 'inline-block';
+      if (fallbackText && fallbackText.classList && fallbackText.classList.contains('logo-fallback-text')) {
+        fallbackText.style.display = 'none';
       }
-
+    };
+    probe.onerror = () => {
       img.style.display = 'none';
-      if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
+      if (fallbackText && fallbackText.classList && fallbackText.classList.contains('logo-fallback-text')) {
         fallbackText.style.display = 'inline-block';
       }
-
-      const probe = new Image();
-      probe.onload = () => {
-        img.src = source;
-        img.style.display = 'inline-block';
-        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
-          fallbackText.style.display = 'none';
-        }
-      };
-      probe.onerror = () => {
-        img.style.display = 'none';
-        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
-          fallbackText.style.display = 'inline-block';
-        }
-      };
-      probe.src = source;
-    }
-
-    function applyBrandingLogo() {
-      const savedLogo = localStorage.getItem('sacrifice_logo_url');
-      const logoSource = savedLogo || 'logo.png';
-      setLogoSource(logoImg, logoSource);
-      setLogoSource(navLogoImg, logoSource);
-      // Force nav-brand-logo to always show the "S" text fallback
-      setLogoSource(navLogoImg, logoSource, true);
-      if (savedLogo && settingLogoUrl) {
-        settingLogoUrl.value = savedLogo;
-      }
-    }
-
-    applyBrandingLogo();
-
-    // Settings modal interaction listeners
-    if (btnSettings) {
-      btnSettings.addEventListener('click', () => {
-        const savedLogo = localStorage.getItem('sacrifice_logo_url') || '';
-        settingLogoUrl.value = savedLogo;
-        settingsModal.classList.remove('hidden');
-      });
-    }
-
-    if (btnCloseSettings) {
-      btnCloseSettings.addEventListener('click', () => {
-        settingsModal.classList.add('hidden');
-      });
-    }
-
-    if (settingsModal) {
-      settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) {
-          settingsModal.classList.add('hidden');
-        }
-      });
-    }
-
-    if (btnSaveSettings) {
-      btnSaveSettings.addEventListener('click', () => {
-        const url = settingLogoUrl.value.trim();
-        if (url) {
-          localStorage.setItem('sacrifice_logo_url', url);
-          showToast('Branding logo custom image applied!', 'success');
-        } else {
-          localStorage.removeItem('sacrifice_logo_url');
-          showToast('Logo reset to default.', 'info');
-        }
-        applyBrandingLogo();
-        settingsModal.classList.add('hidden');
-      });
-    }
-
-    // --- Auth screen toggles ---
-    toSignup.addEventListener('click', (e) => {
-      e.preventDefault();
-      loginForm.classList.add('hidden');
-      signupForm.classList.remove('hidden');
-      hideAuthToast();
-    });
-
-    toLogin.addEventListener('click', (e) => {
-      e.preventDefault();
-      signupForm.classList.add('hidden');
-      loginForm.classList.remove('hidden');
-      hideAuthToast();
-    });
-
-    // --- Notification System ---
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.style.animation = 'toastIn 0.22s reverse forwards';
-        setTimeout(() => toast.remove(), 300);
-      }, 4000);
-    }
-
-    async function parseApiResponse(response) {
-      const text = await response.text();
-      try {
-        return text ? JSON.parse(text) : {};
-      } catch (err) {
-        return { error: text ? text.slice(0, 180) : `HTTP ${response.status}` };
-      }
-    }
-
-    // --- Phrase loader (reads /phrases.txt and picks a random line) ---
-    async function loadRandomPhrase(username) {
-      if (!phraseDisplay) return;
-      try {
-        const res = await fetch('/phrases.txt');
-        if (!res.ok) throw new Error('Failed to load phrases');
-        const text = await res.text();
-        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        if (lines.length === 0) {
-          phraseDisplay.textContent = 'No phrases available.';
-          return;
-        }
-        const choice = lines[Math.floor(Math.random() * lines.length)];
-        const replaced = choice.replace(/\{user\}/g, username || 'Guest');
-        phraseDisplay.textContent = replaced;
-      } catch (err) {
-        phraseDisplay.textContent = 'Unable to load phrases.';
-      }
-    }
-
-    function showAuthToast(message) {
-      authToast.textContent = message;
-      authToast.classList.remove('hidden');
-    }
-
-    function hideAuthToast() {
-      authToast.classList.add('hidden');
-    }
-
-    const sectionCopy = {
-      silent: {
-        title: 'Silent Aimbot',
-        subtitle: 'Configure silent aim behaviour, field of view, target priority, and anti-curve settings.'
-      },
-      trigger: {
-        title: 'Trigger Bot',
-        subtitle: 'Tune trigger activation, hit filters, timing, and custom hitbox behaviour.'
-      },
-      camera: {
-        title: 'Camera Aimbot',
-        subtitle: 'Adjust camlock movement, prediction, smoothness, shake, and target settings.'
-      },
-      visuals: {
-        title: 'ESP & Visuals',
-        subtitle: 'Control watermark, ESP, sky, color effects, and visible target indicators.'
-      },
-      movement: {
-        title: 'Movement',
-        subtitle: 'Manage speed, jump, orbit, noclip, panic ground, and movement helpers.'
-      },
-      weapons: {
-        title: 'Weapons',
-        subtitle: 'Update spread, delay, rage mode, skins, wallbang, and weapon-related modifiers.'
-      },
-      misc: {
-        title: 'Misc',
-        subtitle: 'Configure hitboxes, avatar changes, damage, sounds, and extra utility features.'
-      },
-      configs: {
-        title: 'Configs',
-        subtitle: 'Save, load, import and export your Sacrifice configuration tables.'
-      }
     };
+    probe.src = source;
+  }
 
-    const configSchema = {
-      silent: [
-        {
-          title: 'Silent Aim',
-          controls: [
-            boolControl('Enable Silent Aim', '(\\[\\x27Silent Aim\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            boolControl('Ignore FOV', '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Ignore Fov\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('One Tap', '(\\[\\x27One Tap\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', false),
-            selectControl('Hit Part', '(\\[\\x27Hit Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Closest Point', ['Closest Point', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso']),
-            numberControl('Hit Chance', '(\\bHitChance\\s*=\\s*)([0-9.]+)(\\s*,)', 100, 0, 100, 1, '%'),
-            selectControl('Mode', '(\\bMode\\s*=\\s*)"([^"]*)"(\\s*,)', 'Target', ['Target', 'Automatic'])
-          ]
-        },
-        {
-          title: 'Field Of View',
-          controls: [
-            boolControl('FOV Enabled', '(\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            boolControl('FOV Visible', '(\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Radius', '(\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 350, 0, 1000, 5),
-            numberControl('Thickness', '(\\[\\x27Thickness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 1.5, 0, 10, 0.1),
-            numberControl('Transparency', '(\\[\\x27Transparency\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 1, 0, 1, 0.05)
-          ]
-        },
-        {
-          title: 'Legit & Anti Curve',
-          controls: [
-            boolControl('Legit Mode', '(\\[\\x27Legit\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('Anti Curve', '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Max Angle', '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', 15, 0, 90, 1),
-            boolControl('Scaling', '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Scaling Factor', '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Factor\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', 1, 0, 5, 0.1),
-            numberControl('Max Distance', '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 1222, 0, 5000, 25)
-          ]
-        }
-      ],
-      trigger: [
-        {
-          title: 'Trigger Bot',
-          controls: [
-            boolControl('Enabled', '(\\[\\x27Trigger Bot\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            textControl('Keybind', '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Keybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'T'),
-            textControl('Target Keybind', '(\\[\\x27TargetKeybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'H'),
-            numberControl('Interval', '(\\[\\x27Interval\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 0.01, 0, 1, 0.01),
-            selectControl('Activation', '(\\[\\x27Activation\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Toggle', ['Toggle', 'Hold']),
-            selectControl('Mode', '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Fov', ['Fov', 'Target'])
-          ]
-        },
-        {
-          title: 'Trigger Settings',
-          controls: [
-            selectControl('Hits', '(\\[\\x27Hits\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Everything', ['Everything', 'Players', 'HitParts']),
-            boolControl('Humanized Reaction', '(\\[\\x27HumanizedReaction\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            boolControl('Input Delay', '(\\[\\x27Input\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Input Start', '(\\[\\x27Start\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 0, 0, 1, 0.01),
-            numberControl('Input End', '(\\[\\x27End\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 0, 0, 1, 0.01),
-            boolControl('Custom Size', '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Custom Size Value', '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Value\\s*=\\s*)([0-9.]+)(\\s*)', 40, 0, 1000, 1)
-          ]
-        }
-      ],
-      camera: [
-        {
-          title: 'Camera Aimbot',
-          controls: [
-            boolControl('Camlock Enabled', '(\\[\\x27Camlock\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            textControl('Keybind', '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Keybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'Q'),
-            boolControl('Wall Check', '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27WallCheck\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Snappiness', '(\\[\\x27Snappiness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 0.045, 0, 1, 0.005),
-            selectControl('Smooth Mode', '(\\[\\x27Smooth Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Legit', ['Legit', 'Rage']),
-            selectControl('Method', '(\\[\\x27Method\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'Camera', ['Camera', 'Mouse'])
-          ]
-        },
-        {
-          title: 'Prediction & Shake',
-          controls: [
-            selectControl('Target Part', '(\\[\\x27Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', 'UpperTorso', ['Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso']),
-            numberControl('Blend', '(\\[\\x27Blend\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 0.17, 0, 1, 0.01),
-            boolControl('Dynamic Height', '(\\[\\x27DynamicHeightCompensation\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            boolControl('Predictions', '(\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            boolControl('Human Shake', '(\\[\\x27HumanShake\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Shake Amount', '(\\[\\x27Amount\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*)', 0.55, 0, 3, 0.05),
-            numberControl('Shake X', '(Shake\\s*=\\s*\\{[\\s\\S]*?\\bX\\s*=\\s*)([0-9.]+)(\\s*,)', 0.5, 0, 10, 0.05),
-            numberControl('Shake Y', '(Shake\\s*=\\s*\\{[\\s\\S]*?\\bY\\s*=\\s*)([0-9.]+)(\\s*,)', 0.5, 0, 10, 0.05)
-          ]
-        }
-      ],
-      visuals: [
-        {
-          title: 'Watermark',
-          controls: [
-            boolControl('Watermark Enabled', '(Watermark\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            textControl('Watermark Name', '(Watermark\\s*=\\s*\\{[\\s\\S]*?Username\\s*=\\s*)"([^"]*)"(\\s*,)', 'Sacrifice.cc'),
-            textControl('Watermark Color RGB', '(Watermark\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*)', '12, 12, 255', 'raw')
-          ]
-        },
-        {
-          title: 'ESP',
-          controls: [
-            boolControl('ESP Enabled', '(ESP\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            textControl('ESP Keybind', '(ESP\\s*=\\s*\\{[\\s\\S]*?Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', 'B'),
-            numberControl('ESP Size', '(ESP\\s*=\\s*\\{[\\s\\S]*?Size\\s*=\\s*)([0-9.]+)(\\s*,)', 11, 1, 40, 1),
-            textControl('Default Color RGB', '(DefaultColor\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', '255, 255, 255', 'raw'),
-            textControl('Target Color RGB', '(TargetColor\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', '255, 0, 0', 'raw')
-          ]
-        },
-        {
-          title: 'World',
-          controls: [
-            boolControl('Color Modifications', '(\\["Color Modifications"\\]\\s*=\\s*\\{\\s*Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Vibrancy', '(Vibrancy\\s*=\\s*)([0-9.]+)(\\s*,)', 0.45, 0, 2, 0.05),
-            selectControl('Sky Color', '(Sky\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*)"([^"]*)"(\\s*\\})', 'Black', ['Black', 'Red', 'Blue', 'Purple'])
-          ]
-        }
-      ],
-      movement: [
-        {
-          title: 'Movement Modifications',
-          controls: [
-            boolControl('Speed Enabled', '(\\["Speed Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Default Speed', '(DefaultSpeed\\s*=\\s*)([0-9.]+)(\\s*,)', 35, 0, 1000, 1),
-            selectControl('Speed Method', '(Method\\s*=\\s*)"([^"]*)"(\\s*,)', 'WalkSpeed', ['WalkSpeed', 'Velocity']),
-            textControl('Speed Keybind', '(\\["Speed Modifications"\\][\\s\\S]*?Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', 'V'),
-            boolControl('Jump Enabled', '(\\["Jump Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Jump Power', '(JumpPower\\s*=\\s*)([0-9.]+)(\\s*,)', 60, 0, 500, 1)
-          ]
-        },
-        {
-          title: 'Mobility Helpers',
-          controls: [
-            boolControl('Spiderman', '(Spiderman\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Jump Boost', '(\\["Jump Boost"\\]\\s*=\\s*)([0-9.]+)(\\s*,)', 80, 0, 300, 1),
-            boolControl('Noclip', '(Noclip\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            textControl('Noclip Keybind', '(Noclip\\s*=\\s*\\{[\\s\\S]*?Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', 'N'),
-            boolControl('Panic Ground', '(\\["Panic Ground"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true)
-          ]
-        }
-      ],
-      weapons: [
-        {
-          title: 'Weapon Modifications',
-          controls: [
-            boolControl('Spread Mod', '(SpreadMod\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Spread Amount', '(SpreadMod\\s*=\\s*\\{[\\s\\S]*?Amount\\s*=\\s*)([0-9.]+)(\\s*)', 70, 0, 100, 1),
-            boolControl('Delay Changer', '(\\["Delay Changer"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', true),
-            numberControl('Global Delay', '(GlobalDelay\\s*=\\s*)([0-9.]+)(\\s*,)', 0.08, 0, 1, 0.01),
-            boolControl('Rage Mode', '(RageMode\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Fire Interval', '(FireInterval\\s*=\\s*)([0-9.]+)(\\s*)', 0.00001, 0, 1, 0.00001)
-          ]
-        },
-        {
-          title: 'Skins & Wallbang',
-          controls: [
-            boolControl('Skin Changer', '(\\["Skin Changer"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            textControl('Revolver Skin', '(\\["\\[Revolver\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'Inferno'),
-            textControl('Double Barrel SG Skin', '(\\["\\[Double Barrel SG\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'Galaxy'),
-            textControl('Tactical Shotgun Skin', '(\\["\\[Tactical Shotgun\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,?)', 'Default'),
-            textControl('Knife Skin', '(\\["\\[Knife\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', 'Golden Age Tanto'),
-            boolControl('Wallbang', '(\\["Wallbang"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*)', true)
-          ]
-        }
-      ],
-      misc: [
-        {
-          title: 'Hitbox & Damage',
-          controls: [
-            boolControl('Hitbox Expander', '(\\["Hitbox Expander"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Hitbox Size', '(\\["Hitbox Expander"\\][\\s\\S]*?Size\\s*=\\s*)([0-9.]+)(\\s*,)', 100, 0, 100, 1),
-            boolControl('Visualize Hitbox', '(Visualize\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('Damage Override', '(Overrider\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            numberControl('Override Damage', '(Damage\\s*=\\s*)([0-9.]+)(\\s*)', 100, 0, 100, 1),
-            boolControl('Damage Amplifier', '(Amplifier\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false)
-          ]
-        },
-        {
-          title: 'Avatar & Sound',
-          controls: [
-            boolControl('Avatar Mods', '(\\["Avatar Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('Headless', '(Headless\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('Korblox', '(Korblox\\s*=\\s*)(true|false)(\\s*,)', false),
-            boolControl('Hitsounds', '(Hitsounds\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', false),
-            textControl('Sound', '(Sound\\s*=\\s*)"([^"]*)"(\\s*,)', ''),
-            numberControl('Volume', '(Volume\\s*=\\s*)([0-9.]+)(\\s*)', 3, 0, 100, 0.1),
-            boolControl('Infinite Range', '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?enabled\\s*=\\s*)(true|false)(\\s*,)', true)
-          ]
-        }
-      ]
-    };
+  function applyBrandingLogo() {
+    const savedLogo = localStorage.getItem('sacrifice_logo_url');
+    const logoSource = savedLogo || 'logo.png';
+    setLogoSource(logoImg, logoSource);
+    setLogoSource(navLogoImg, logoSource);
+    if (savedLogo && settingLogoUrl) settingLogoUrl.value = savedLogo;
+  }
 
-    function boolControl(label, pattern, fallback) {
-      return { type: 'toggle', label, pattern, fallback };
+  // --- Notifications ---
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'toastOut 0.22s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  async function parseApiResponse(response) {
+    const text = await response.text();
+    try { return text ? JSON.parse(text) : {}; }
+    catch (err) { return { error: text ? text.slice(0, 180) : `HTTP ${response.status}` }; }
+  }
+
+  async function loadRandomPhrase(username) {
+    if (!phraseDisplay) return;
+    try {
+      const res = await fetch('/phrases.txt');
+      if (!res.ok) throw new Error('Failed to load phrases');
+      const text = await res.text();
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) { phraseDisplay.textContent = 'No phrases available.'; return; }
+      const choice = lines[Math.floor(Math.random() * lines.length)];
+      const replaced = choice.replace(/\{user\}/g, username || 'Guest');
+      phraseDisplay.textContent = replaced;
+    } catch (err) { phraseDisplay.textContent = 'Unable to load phrases.'; }
+  }
+
+  function showAuthToast(message) {
+    if (!authToast) return;
+    authToast.textContent = message;
+    authToast.classList.remove('hidden');
+    setTimeout(() => { if (authToast) authToast.classList.add('hidden'); }, 5000);
+  }
+
+  function hideAuthToast() { if (authToast) authToast.classList.add('hidden'); }
+
+  // --- Section Titles ---
+  const sectionCopy = {
+    silent: { title: 'Silent Aimbot', subtitle: 'Stealth aim assistance with customizable hit detection and FOV' },
+    trigger: { title: 'Trigger Bot', subtitle: 'Auto-fire when crosshair is on target' },
+    camera: { title: 'Camera Aimbot', subtitle: 'Smooth camera tracking with advanced prediction' },
+    visuals: { title: 'ESP & Visuals', subtitle: 'Enhanced visual feedback and world modifications' },
+    movement: { title: 'Movement', subtitle: 'Enhanced mobility and movement abilities' },
+    weapons: { title: 'Weapons', subtitle: 'Weapon modifications and skin changer' },
+    misc: { title: 'Miscellaneous', subtitle: 'Extra features and utilities' },
+    configs: { title: 'Configs', subtitle: 'Save, load, import and export your configurations' }
+  };
+
+  // ============================================================
+  // SILENT AIM CONTROLS (Organized by category)
+  // ============================================================
+  const silentCoreControls = [
+    { type: 'toggle', label: 'Enable Silent Aim', pattern: '(\\[\\x27Silent Aim\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Ignore FOV', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Ignore Fov\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'One Tap Mode', pattern: '(\\[\\x27One Tap\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'select', label: 'Hit Part', pattern: '(\\[\\x27Hit Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Closest Point', options: ['Closest Point', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso'] },
+    { type: 'range', label: 'Hit Chance', pattern: '(\\bHitChance\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 100, min: 0, max: 100, step: 1, suffix: '%' },
+    { type: 'range', label: 'Smoothing', pattern: '(\\bSmoothing\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.1, min: 0, max: 1, step: 0.01 },
+    { type: 'select', label: 'Mode', pattern: '(\\bMode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Target', options: ['Target', 'Automatic'] },
+    { type: 'select', label: 'Target Priority', pattern: '(\\bTargetPriority\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Fov', options: ['Fov', 'Distance', 'Health'] },
+    { type: 'text', label: 'Target Keybind', pattern: '(\\bTargetKeybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'C' },
+    { type: 'toggle', label: 'Target Mode Force Hit', pattern: '(\\bTargetModeForceHit\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Global Wall Check', pattern: '(\\["Global WallCheck"\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Knock Check', pattern: '(\\["Knock Check"\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true }
+  ];
+
+  const silentFovControls = [
+    { type: 'toggle', label: 'FOV Enabled', pattern: '(\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'FOV Visible', pattern: '(\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'FOV Radius', pattern: '(\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
+    { type: 'range', label: 'FOV Thickness', pattern: '(\\[\\x27Thickness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'FOV Transparency', pattern: '(\\[\\x27Transparency\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
+    { type: 'toggle', label: 'FOV Filled', pattern: '(\\[\\x27Filled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'FOV Color (R,G,B)', pattern: '(\\[\\x27Color\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' }
+  ];
+
+  const silentLegitControls = [
+    { type: 'toggle', label: 'Legit Mode', pattern: '(\\[\\x27Legit\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Legit Hit Chance', pattern: '(\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Hit Chance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 100, min: 0, max: 100, step: 1, suffix: '%' },
+    { type: 'toggle', label: 'FOV Scaling Hit Chance', pattern: '(\\[\\x27FovScalingHitChance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Anti Curve', pattern: '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Anti Curve Max Angle', pattern: '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
+    { type: 'toggle', label: 'Anti Aimview', pattern: '(\\[\\x27Anti Aimview\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Anti Aimview Max Angle', pattern: '(\\[\\x27Anti Aimview\\x27\\][\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
+    { type: 'toggle', label: 'Scaling', pattern: '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Scaling Factor', pattern: '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Factor\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 1, min: 0, max: 5, step: 0.1 },
+    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1222, min: 0, max: 5000, step: 25, suffix: 'studs' },
+    { type: 'toggle', label: 'Auto Distance', pattern: '(\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+  ];
+
+  const silentPredictionControls = [
+    { type: 'toggle', label: 'Auto Predictions', pattern: '(\\[\\x27Auto Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 15, min: 0, max: 50, step: 1 },
+    { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 1 }
+  ];
+
+  const silentTracerControls = [
+    { type: 'toggle', label: 'Tracer Enabled', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Tracer Thickness', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Thickness\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'Tracer Transparency', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Transparency\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
+    { type: 'text', label: 'Tracer Color (R,G,B)', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' }
+  ];
+
+  const silentClosestControls = [
+    { type: 'range', label: 'Closest Point Samples', pattern: '(\\[\\x27Closest Point\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Samples\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3, min: 1, max: 20, step: 1 },
+    { type: 'toggle', label: 'Diagonal Sampling', pattern: '(\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27Diagonal\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Show Points', pattern: '(\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27ShowPoints\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Point Color (R,G,B)', pattern: '(\\[\\x27PointColor\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*\\})', fallback: '255, 0, 0', valueMode: 'raw' }
+  ];
+
+  // ============================================================
+  // TRIGGER BOT CONTROLS
+  // ============================================================
+  const triggerCoreControls = [
+    { type: 'toggle', label: 'Enable Trigger Bot', pattern: '(\\[\\x27Trigger Bot\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'Trigger Keybind', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Keybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'T' },
+    { type: 'text', label: 'Target Keybind', pattern: '(\\[\\x27TargetKeybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'H' },
+    { type: 'range', label: 'Trigger Interval', pattern: '(\\[\\x27Interval\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.01, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'select', label: 'Activation Mode', pattern: '(\\[\\x27Activation\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Toggle', options: ['Toggle', 'Hold'] },
+    { type: 'select', label: 'Trigger Mode', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Fov', options: ['Fov', 'Target'] },
+    { type: 'toggle', label: 'Knock Check', pattern: '(\\[\\x27Knock Check\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3411, min: 0, max: 10000, step: 50, suffix: 'studs' },
+    { type: 'toggle', label: 'Auto Distance', pattern: '(\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+  ];
+
+  const triggerHitControls = [
+    { type: 'select', label: 'Hit Type', pattern: '(\\[\\x27Hits\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Everything', options: ['Everything', 'Players', 'HitParts'] },
+    { type: 'toggle', label: 'Humanized Reaction', pattern: '(\\[\\x27HumanizedReaction\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Input Delay Enabled', pattern: '(\\[\\x27Input\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Input Start Delay', pattern: '(\\[\\x27Start\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'range', label: 'Input End Delay', pattern: '(\\[\\x27End\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Custom Hitbox Size', pattern: '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Custom Hitbox Value', pattern: '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Value\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 40, min: 0, max: 200, step: 1 }
+  ];
+
+  const triggerWeaponControls = [
+    { type: 'toggle', label: 'Enable Double Barrel SG', pattern: '', fallback: true, weaponName: '[Double-Barrel SG]' },
+    { type: 'toggle', label: 'Enable Revolver', pattern: '', fallback: true, weaponName: '[Revolver]' },
+    { type: 'toggle', label: 'Enable Tactical Shotgun', pattern: '', fallback: true, weaponName: '[TacticalShotgun]' },
+    { type: 'toggle', label: 'Enable Glock', pattern: '', fallback: true, weaponName: '[Glock]' }
+  ];
+
+  // ============================================================
+  // CAMERA AIMBOT CONTROLS
+  // ============================================================
+  const cameraCoreControls = [
+    { type: 'toggle', label: 'Enable Camlock', pattern: '(\\[\\x27Camlock\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'Camlock Keybind', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Keybind\\x27\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Q' },
+    { type: 'toggle', label: 'Unlock On Death', pattern: '(\\[\\x27UnlockOnDeath\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Wall Check', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27WallCheck\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Ignore FOV', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Ignore Fov\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'select', label: 'Activation Mode', pattern: '(\\[\\x27Activation\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Toggle', options: ['Toggle', 'Hold'] },
+    { type: 'select', label: 'Camlock Mode', pattern: '(\\[\\x27Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Fov', options: ['Fov', 'Target'] },
+    { type: 'select', label: 'Smooth Mode', pattern: '(\\[\\x27Smooth Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Legit', options: ['Legit', 'Rage'] },
+    { type: 'select', label: 'Method', pattern: '(\\[\\x27Method\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Camera', options: ['Camera', 'Mouse'] }
+  ];
+
+  const cameraTargetControls = [
+    { type: 'select', label: 'Target Part', pattern: '(\\[\\x27Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'UpperTorso', options: ['Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso'] },
+    { type: 'range', label: 'Blend', pattern: '(\\[\\x27Blend\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.17, min: 0, max: 1, step: 0.01 },
+    { type: 'range', label: 'Snappiness', pattern: '(\\[\\x27Snappiness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.045, min: 0, max: 1, step: 0.005 },
+    { type: 'toggle', label: 'Dynamic Height Compensation', pattern: '(\\[\\x27DynamicHeightCompensation\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Vertical Adjustment Offset', pattern: '(\\[\\x27VerticalAdjustmentOffset\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 1 },
+    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1000, min: 0, max: 5000, step: 50, suffix: 'studs' },
+    { type: 'toggle', label: 'First Person', pattern: '(\\[\\x27Checks\\x27\\][\\s\\S]*?\\[\\x27First Person\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Third Person', pattern: '(\\[\\x27Checks\\x27\\][\\s\\S]*?\\[\\x27Third Person\\x27\\]\\s*=\\s*)(true|false)(\\s*\\})', fallback: true }
+  ];
+
+  const cameraPredictionControls = [
+    { type: 'toggle', label: 'Enable Camera Predictions', pattern: '(\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.225, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.125, min: -5, max: 5, step: 0.025 }
+  ];
+
+  const cameraShakeControls = [
+    { type: 'toggle', label: 'Human Shake', pattern: '(\\[\\x27HumanShake\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Shake Amount', pattern: '(\\[\\x27HumanShake\\x27\\][\\s\\S]*?\\[\\x27Amount\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.55, min: 0, max: 3, step: 0.05 },
+    { type: 'toggle', label: 'Global Shake', pattern: '(Shake\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'select', label: 'Shake Mode', pattern: '(ShakeMode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'WholeBody', options: ['WholeBody', 'Camera', 'Gun'] },
+    { type: 'range', label: 'Shake X Intensity', pattern: '(Shake\\s*=\\s*\\{[\\s\\S]*?\\bX\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.5, min: 0, max: 10, step: 0.05 },
+    { type: 'range', label: 'Shake Y Intensity', pattern: '(Shake\\s*=\\s*\\{[\\s\\S]*?\\bY\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.5, min: 0, max: 10, step: 0.05 }
+  ];
+
+  const cameraRoboticControls = [
+    { type: 'toggle', label: 'Robotic Mode', pattern: '(Robotic\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Mode Switch Keybind', pattern: '(ModeSwitchKeybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'G' },
+    { type: 'text', label: 'Flick Keybind', pattern: '(FlickKeybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'F' },
+    { type: 'toggle', label: 'Overshoot', pattern: '(Overshoot\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Overshoot Multiplier', pattern: '(Overshoot\\s*=\\s*\\{[\\s\\S]*?Multiplier\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.35, min: 0, max: 5, step: 0.05 },
+    { type: 'range', label: 'Overshoot Decay', pattern: '(Overshoot\\s*=\\s*\\{[\\s\\S]*?DecaySpeed\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 12, min: 0, max: 50, step: 0.5 },
+    { type: 'toggle', label: 'Jitter', pattern: '(Jitter\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Jitter Frequency', pattern: '(Jitter\\s*=\\s*\\{[\\s\\S]*?Frequency\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 45, min: 0, max: 100, step: 1 },
+    { type: 'range', label: 'Jitter Amplitude X', pattern: '(Jitter\\s*=\\s*\\{[\\s\\S]*?AmplitudeX\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 2.2, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'Jitter Amplitude Y', pattern: '(Jitter\\s*=\\s*\\{[\\s\\S]*?AmplitudeY\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 2.2, min: 0, max: 10, step: 0.1 },
+    { type: 'toggle', label: 'Spasm', pattern: '(Spasm\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Spasm Chance', pattern: '(Spasm\\s*=\\s*\\{[\\s\\S]*?Chance\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.08, min: 0, max: 1, step: 0.01, suffix: '%' },
+    { type: 'range', label: 'Spasm Max Distance', pattern: '(Spasm\\s*=\\s*\\{[\\s\\S]*?MaxSpikeDistance\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 5.5, min: 0, max: 20, step: 0.5 }
+  ];
+
+  // ============================================================
+  // VISUALS CONTROLS
+  // ============================================================
+  const visualsEspControls = [
+    { type: 'toggle', label: 'ESP Enabled', pattern: '(ESP\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'ESP Keybind', pattern: '(ESP\\s*=\\s*\\{[\\s\\S]*?Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'B' },
+    { type: 'range', label: 'ESP Text Size', pattern: '(ESP\\s*=\\s*\\{[\\s\\S]*?Size\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 11, min: 5, max: 30, step: 1 },
+    { type: 'text', label: 'Default ESP Color (R,G,B)', pattern: '(DefaultColor\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 255, 255', valueMode: 'raw' },
+    { type: 'text', label: 'Target ESP Color (R,G,B)', pattern: '(TargetColor\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' },
+    { type: 'text', label: 'Silent Aim Target Color (R,G,B)', pattern: '(SilentAimTargetColor\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*\\})', fallback: '255, 0, 255', valueMode: 'raw' }
+  ];
+
+  const visualsWatermarkControls = [
+    { type: 'toggle', label: 'Watermark Enabled', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'Watermark Text', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Username\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Sacrifice.cc' },
+    { type: 'text', label: 'Watermark Color (R,G,B)', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*\\})', fallback: '12, 12, 255', valueMode: 'raw' }
+  ];
+
+  const visualsWorldControls = [
+    { type: 'toggle', label: 'Color Modifications', pattern: '(\\["Color Modifications"\\]\\s*=\\s*\\{\\s*Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Vibrancy', pattern: '(Vibrancy\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.45, min: 0, max: 2, step: 0.05 },
+    { type: 'range', label: 'Contrast', pattern: '(Contrast\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: -1, max: 1, step: 0.05 },
+    { type: 'range', label: 'Brightness', pattern: '(Brightness\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0, min: -1, max: 1, step: 0.05 },
+    { type: 'toggle', label: 'Sky Enabled', pattern: '(Sky\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'select', label: 'Sky Color', pattern: '(Sky\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'Black', options: ['Black', 'Red', 'Blue', 'Purple', 'Green', 'Yellow', 'White'] }
+  ];
+
+  // ============================================================
+  // MOVEMENT CONTROLS
+  // ============================================================
+  const movementSpeedControls = [
+    { type: 'toggle', label: 'Speed Mod Enabled', pattern: '(\\["Speed Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Default Walk Speed', pattern: '(DefaultSpeed\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 35, min: 0, max: 500, step: 1, suffix: 'walkspeed' },
+    { type: 'select', label: 'Speed Method', pattern: '(Method\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'WalkSpeed', options: ['WalkSpeed', 'Velocity'] },
+    { type: 'text', label: 'Speed Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'V' }
+  ];
+
+  const movementJumpControls = [
+    { type: 'toggle', label: 'Jump Mod Enabled', pattern: '(\\["Jump Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Jump Power', pattern: '(JumpPower\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 60, min: 0, max: 500, step: 1 },
+    { type: 'text', label: 'Jump Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'H' }
+  ];
+
+  const movementSpidermanControls = [
+    { type: 'toggle', label: 'Spiderman Enabled', pattern: '(Spiderman\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Jump Boost', pattern: '(\\["Jump Boost"\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 80, min: 0, max: 300, step: 5 },
+    { type: 'range', label: 'Jump Height', pattern: '(\\["Jump Height"\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 80, min: 0, max: 300, step: 5 },
+    { type: 'range', label: 'Jump Delay', pattern: '(\\["Jump Delay"\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 1, step: 0.05, suffix: 's' },
+    { type: 'text', label: 'Spiderman Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'J' }
+  ];
+
+  const movementOrbitControls = [
+    { type: 'toggle', label: 'Orbit Enabled', pattern: '(Orbit\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Orbit Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Z' },
+    { type: 'range', label: 'Orbit Distance', pattern: '(Distance\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 10, min: 0, max: 50, step: 1, suffix: 'studs' },
+    { type: 'range', label: 'Orbit Height', pattern: '(Height\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: -20, max: 20, step: 1 },
+    { type: 'range', label: 'Orbit Speed', pattern: '(Speed\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 6150, min: 0, max: 20000, step: 100 },
+    { type: 'toggle', label: 'Auto Kill', pattern: '(AutoKill\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Auto Reload', pattern: '(AutoReload\\s*=\\s*)(true|false)(\\s*,)', fallback: true }
+  ];
+
+  const movementMiscControls = [
+    { type: 'toggle', label: 'Noclip Enabled', pattern: '(Noclip\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Noclip Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'N' },
+    { type: 'toggle', label: 'Panic Ground', pattern: '(\\["Panic Ground"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'Panic Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'P' },
+    { type: 'toggle', label: 'Anti Stomp', pattern: '(AntiStomp\\s*=\\s*\\{Enabled\\s*=\\s*)(true|false)(\\s*\\})', fallback: false }
+  ];
+
+  // ============================================================
+  // WEAPONS CONTROLS
+  // ============================================================
+  const weaponsSpreadControls = [
+    { type: 'toggle', label: 'Spread Mod Enabled', pattern: '(SpreadMod\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Spread Amount', pattern: '(Amount\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 70, min: 0, max: 100, step: 1, suffix: '%' },
+    { type: 'toggle', label: 'Wallbang Enabled', pattern: '(\\["Wallbang"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*\\})', fallback: true }
+  ];
+
+  const weaponsFireRateControls = [
+    { type: 'toggle', label: 'Rapid Fire', pattern: '(Traced\\s*=\\s*\\{[\\s\\S]*?RapidFire\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Rapid Fire Delay', pattern: '(RapidFireDelay\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.01, min: 0, max: 0.5, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Delay Changer', pattern: '(\\["Delay Changer"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Global Delay', pattern: '(GlobalDelay\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.08, min: 0, max: 1, step: 0.01, suffix: 's' }
+  ];
+
+  const weaponsRageControls = [
+    { type: 'toggle', label: 'Rage Mode', pattern: '(RageMode\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Fire Interval', pattern: '(FireInterval\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.00001, min: 0, max: 0.1, step: 0.00001, suffix: 's' }
+  ];
+
+  const weaponsSkinControls = [
+    { type: 'toggle', label: 'Skin Changer Enabled', pattern: '(\\["Skin Changer"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Revolver Skin', pattern: '(\\["\\[Revolver\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Inferno' },
+    { type: 'text', label: 'Glock Skin', pattern: '(\\["\\[Glock\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Blue Dagger' },
+    { type: 'text', label: 'Knife Skin', pattern: '(\\["\\[Knife\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Golden Age Tanto' },
+    { type: 'text', label: 'Double Barrel SG Skin', pattern: '(\\["\\[Double Barrel SG\\]"\\]\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'Galaxy' }
+  ];
+
+  // ============================================================
+  // MISC CONTROLS
+  // ============================================================
+  const miscHitboxControls = [
+    { type: 'toggle', label: 'Hitbox Expander', pattern: '(\\["Hitbox Expander"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Hitbox Size', pattern: '(Size\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 110, min: 0, max: 200, step: 1, suffix: '%' },
+    { type: 'toggle', label: 'Visualize Hitbox', pattern: '(Visualize\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Ignore Dead', pattern: '(\\["Ignore Dead"\\]\\s*=\\s*)(true|false)(\\s*\\})', fallback: false }
+  ];
+
+  const miscDamageControls = [
+    { type: 'toggle', label: 'Damage Override', pattern: '(Overrider\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Override Damage Amount', pattern: '(Damage\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 200, min: 1, max: 9999, step: 1 },
+    { type: 'toggle', label: 'Damage Amplifier', pattern: '(Amplifier\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Damage Multiplier', pattern: '(Multiplier\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 35, min: 1, max: 100, step: 1, suffix: 'x' }
+  ];
+
+  const miscRangeControls = [
+    { type: 'toggle', label: 'Infinite Range', pattern: '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Range Distance', pattern: '(range\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1000, min: 100, max: 5000, step: 50, suffix: 'studs' },
+    { type: 'range', label: 'Bypass Position', pattern: '(bypasspos\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 10, min: 0, max: 50, step: 1 }
+  ];
+
+  const miscAvatarControls = [
+    { type: 'toggle', label: 'Avatar Mods Enabled', pattern: '(\\["Avatar Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Headless', pattern: '(Headless\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Korblox', pattern: '(Korblox\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Morph Enabled', pattern: '(Morph\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'text', label: 'Morph Target ID', pattern: '(TargetId\\s*=\\s*)([0-9]+)(\\s*\\})', fallback: '3577180836' }
+  ];
+
+  const miscSoundControls = [
+    { type: 'toggle', label: 'Hitsounds Enabled', pattern: '(Hitsounds\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Sound ID', pattern: '(Sound\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: '' },
+    { type: 'range', label: 'Volume', pattern: '(Volume\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 3, min: 0, max: 10, step: 0.5 }
+  ];
+
+  // ============================================================
+  // HELPER FUNCTIONS
+  // ============================================================
+  function getControlValue(control) {
+    if (!configEditor || !configEditor.value) return control.fallback;
+    const match = configEditor.value.match(new RegExp(control.pattern, 'm'));
+    if (!match) return control.fallback;
+    if (control.type === 'toggle') return match[2] === 'true';
+    if (control.type === 'range') return Number(match[2]);
+    return match[2];
+  }
+
+  function formatControlValue(control, value) {
+    if (control.type === 'toggle') return value ? 'true' : 'false';
+    if (control.type === 'range') return String(Number(value));
+    if (control.valueMode === 'raw') return String(value);
+    if (control.type === 'text' || control.type === 'select') return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    return String(value);
+  }
+
+  function updateConfigValue(control, value) {
+    if (!configEditor || !configEditor.value) return;
+    const pattern = new RegExp(control.pattern, 'm');
+    const formatted = formatControlValue(control, value);
+    if (!pattern.test(configEditor.value)) {
+      showToast(`Could not find ${control.label}`, 'warning');
+      return;
     }
+    configEditor.value = configEditor.value.replace(pattern, `$1${formatted}$3`);
+    if (saveStatus) saveStatus.textContent = 'Unsaved changes';
+  }
 
-    function numberControl(label, pattern, fallback, min, max, step, suffix = '') {
-      return { type: 'range', label, pattern, fallback, min, max, step, suffix };
-    }
+  function updateRangeFill(input) {
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const value = Number(input.value || 0);
+    const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
+    input.style.setProperty('--range-fill', `${Math.max(0, Math.min(100, percent))}%`);
+  }
 
-    function textControl(label, pattern, fallback, valueMode = 'string') {
-      return { type: 'text', label, pattern, fallback, valueMode };
-    }
+  // ============================================================
+  // RENDER FUNCTIONS
+  // ============================================================
+  function renderConfigControls(sectionKey = activeConfigSection) {
+    if (!configPanels || !configEditor) return;
 
-    function selectControl(label, pattern, fallback, options) {
-      return { type: 'select', label, pattern, fallback, options };
-    }
+    activeConfigSection = sectionKey;
+    const section = sectionCopy[sectionKey] || sectionCopy.silent;
+    if (configSectionTitle) configSectionTitle.textContent = section.title;
+    if (configSectionSubtitle) configSectionSubtitle.textContent = section.subtitle;
 
-    function getControlValue(control) {
-      const match = configEditor.value.match(new RegExp(control.pattern, 'm'));
-      if (!match) return control.fallback;
-      if (control.type === 'toggle') return match[2] === 'true';
-      if (control.type === 'range') return Number(match[2]);
-      return match[2];
-    }
-
-    function formatControlValue(control, value) {
-      if (control.type === 'toggle') return value ? 'true' : 'false';
-      if (control.type === 'range') return String(Number(value));
-      if (control.valueMode === 'raw') return String(value);
-      return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-    }
-
-    function updateConfigValue(control, value) {
-      const pattern = new RegExp(control.pattern, 'm');
-      const formatted = formatControlValue(control, value);
-      if (!pattern.test(configEditor.value)) {
-        showToast(`Could not find ${control.label} in the generated config`, 'warning');
-        return;
-      }
-      configEditor.value = configEditor.value.replace(pattern, `$1${formatted}$3`);
-      saveStatus.textContent = 'Unsaved changes';
-    }
-
-    function normalizeConfigForGui() {
-      if (!configEditor || !configEditor.value) return;
-      const skinBlock = configEditor.value.match(/(\["Skin Changer"\]\s*=\s*\{[\s\S]*?Skins\s*=\s*\{)([\s\S]*?)(\n\s*\}\s*\n\s*\})/);
-      if (skinBlock && /\["\[Tactical Shotgun\]"\]\s*=\s*"/.test(skinBlock[2])) return;
-
-      configEditor.value = configEditor.value.replace(
-        /(\["\[Double Barrel SG\]"\]\s*=\s*"[^"]*"\s*)(\n\s*})/,
-        '$1,\n            ["[Tactical Shotgun]"] = "Default"$2'
-      );
-    }
-
-    function updateRangeFill(input) {
-      const min = Number(input.min || 0);
-      const max = Number(input.max || 100);
-      const value = Number(input.value || 0);
-      const percent = max === min ? 0 : ((value - min) / (max - min)) * 100;
-      input.style.setProperty('--range-fill', `${Math.max(0, Math.min(100, percent))}%`);
-    }
-
-    function renderConfigControls(sectionKey = activeConfigSection) {
-      if (!configPanels || !configEditor) return;
-
-      activeConfigSection = sectionKey;
-      const section = sectionCopy[sectionKey] || sectionCopy.silent;
-      configSectionTitle.textContent = section.title;
-      configSectionSubtitle.textContent = section.subtitle;
-
-      // Handle configs management tab
-      if (sectionKey === 'configs') {
+    if (sectionKey === 'configs') {
+      if (configPanels) {
         configPanels.innerHTML = '';
         configPanels.classList.add('hidden');
-        configsManagement.classList.remove('hidden');
-        renderSavedConfigs();
-        // Populate export textarea
-        if (configExportText) {
-          configExportText.value = configEditor.value || '';
-        }
-        return;
       }
+      if (configsManagement) configsManagement.classList.remove('hidden');
+      renderSavedConfigs();
+      if (configExportText && configEditor) configExportText.value = configEditor.value || '';
+      return;
+    }
 
-      // Normal config section
-      configsManagement.classList.add('hidden');
+    if (configsManagement) configsManagement.classList.add('hidden');
+    if (configPanels) {
       configPanels.classList.remove('hidden');
       configPanels.innerHTML = '';
+    }
 
-      (configSchema[sectionKey] || []).forEach((card) => {
-        const cardEl = document.createElement('section');
-        cardEl.className = 'glass-card setting-card';
+    let cards = [];
 
-        const header = document.createElement('div');
-        header.className = 'setting-card-header';
-        header.innerHTML = `<span class="card-dot"></span><h2>${card.title}</h2>`;
-        cardEl.appendChild(header);
+    if (sectionKey === 'silent') {
+      cards = [
+        { title: 'Core Settings', controls: silentCoreControls },
+        { title: 'Field of View (FOV)', controls: silentFovControls },
+        { title: 'Legit & Anti-Cheat', controls: silentLegitControls },
+        { title: 'Predictions', controls: silentPredictionControls },
+        { title: 'Tracers', controls: silentTracerControls },
+        { title: 'Closest Point', controls: silentClosestControls }
+      ];
+    } else if (sectionKey === 'trigger') {
+      cards = [
+        { title: 'Core Settings', controls: triggerCoreControls },
+        { title: 'Hit Settings', controls: triggerHitControls },
+        { title: 'Weapons', controls: triggerWeaponControls }
+      ];
+    } else if (sectionKey === 'camera') {
+      cards = [
+        { title: 'Core Settings', controls: cameraCoreControls },
+        { title: 'Target Settings', controls: cameraTargetControls },
+        { title: 'Predictions', controls: cameraPredictionControls },
+        { title: 'Shake Settings', controls: cameraShakeControls },
+        { title: 'Robotic Settings', controls: cameraRoboticControls }
+      ];
+    } else if (sectionKey === 'visuals') {
+      cards = [
+        { title: 'ESP (Wallhack)', controls: visualsEspControls },
+        { title: 'Watermark', controls: visualsWatermarkControls },
+        { title: 'World Visuals', controls: visualsWorldControls }
+      ];
+    } else if (sectionKey === 'movement') {
+      cards = [
+        { title: 'Speed Modifications', controls: movementSpeedControls },
+        { title: 'Jump Modifications', controls: movementJumpControls },
+        { title: 'Spiderman', controls: movementSpidermanControls },
+        { title: 'Orbit', controls: movementOrbitControls },
+        { title: 'Mobility Helpers', controls: movementMiscControls }
+      ];
+    } else if (sectionKey === 'weapons') {
+      cards = [
+        { title: 'Spread & Wallbang', controls: weaponsSpreadControls },
+        { title: 'Fire Rate', controls: weaponsFireRateControls },
+        { title: 'Rage Mode', controls: weaponsRageControls },
+        { title: 'Skin Changer', controls: weaponsSkinControls }
+      ];
+    } else if (sectionKey === 'misc') {
+      cards = [
+        { title: 'Hitbox Expander', controls: miscHitboxControls },
+        { title: 'Damage Modifications', controls: miscDamageControls },
+        { title: 'Infinite Range', controls: miscRangeControls },
+        { title: 'Avatar Modifications', controls: miscAvatarControls },
+        { title: 'Hitsounds', controls: miscSoundControls }
+      ];
+    }
 
-        const rows = document.createElement('div');
-        rows.className = 'setting-rows';
+    for (const card of cards) {
+      const cardEl = document.createElement('section');
+      cardEl.className = 'glass-card setting-card';
 
-        card.controls.forEach((control) => {
+      const header = document.createElement('div');
+      header.className = 'setting-card-header';
+      header.innerHTML = `<span class="card-dot"></span><h2>${card.title}</h2>`;
+      cardEl.appendChild(header);
+
+      const rows = document.createElement('div');
+      rows.className = 'setting-rows';
+
+      for (const control of card.controls) {
+        if (control.weaponName) {
+          // Weapon toggles - simplified display
           const row = document.createElement('label');
-          row.className = `setting-row setting-${control.type}`;
-          const value = getControlValue(control);
-
+          row.className = 'setting-row setting-toggle';
           const label = document.createElement('span');
           label.className = 'setting-label';
           label.textContent = control.label;
           row.appendChild(label);
-
-          if (control.type === 'toggle') {
-            const input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = Boolean(value);
-            input.addEventListener('change', () => updateConfigValue(control, input.checked));
-            const switchEl = document.createElement('span');
-            switchEl.className = 'switch';
-            switchEl.appendChild(input);
-            switchEl.appendChild(document.createElement('span'));
-            row.appendChild(switchEl);
-          } else if (control.type === 'range') {
-            const rangeWrap = document.createElement('span');
-            rangeWrap.className = 'range-wrap';
-            const input = document.createElement('input');
-            input.type = 'range';
-            input.min = control.min;
-            input.max = control.max;
-            input.step = control.step;
-            input.value = Number.isFinite(value) ? value : control.fallback;
-            updateRangeFill(input);
-            const output = document.createElement('input');
-            output.type = 'number';
-            output.className = 'range-value-input';
-            output.min = control.min;
-            output.max = control.max;
-            output.step = control.step;
-            output.value = input.value;
-            output.setAttribute('aria-label', `${control.label} value`);
-
-            const commitRangeValue = (nextValue) => {
-              const raw = Number(nextValue);
-              const clamped = Number.isFinite(raw)
-                ? Math.min(control.max, Math.max(control.min, raw))
-                : control.fallback;
-              input.value = clamped;
-              output.value = clamped;
-              updateRangeFill(input);
-              updateConfigValue(control, clamped);
-            };
-
-            input.addEventListener('input', () => {
-              commitRangeValue(input.value);
-            });
-            output.addEventListener('change', () => {
-              commitRangeValue(output.value);
-            });
-            output.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                output.blur();
-              }
-            });
-            rangeWrap.appendChild(input);
-            rangeWrap.appendChild(output);
-            row.appendChild(rangeWrap);
-          } else if (control.type === 'select') {
-            const select = document.createElement('select');
-            control.options.forEach((option) => {
-              const item = document.createElement('option');
-              item.value = option;
-              item.textContent = option;
-              select.appendChild(item);
-            });
-            select.value = value || control.fallback;
-            select.addEventListener('change', () => updateConfigValue(control, select.value));
-            row.appendChild(select);
-          } else {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = value ?? control.fallback;
-            input.addEventListener('change', () => updateConfigValue(control, input.value));
-            row.appendChild(input);
-          }
-
+          const switchEl = document.createElement('span');
+          switchEl.className = 'switch';
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = control.fallback;
+          input.disabled = true;
+          switchEl.appendChild(input);
+          switchEl.appendChild(document.createElement('span'));
+          row.appendChild(switchEl);
           rows.appendChild(row);
-        });
-
-        cardEl.appendChild(rows);
-        configPanels.appendChild(cardEl);
-      });
-    }
-
-    // --- Smooth tab switching with crossfade ---
-    if (configNav) {
-      configNav.addEventListener('click', (event) => {
-        const link = event.target.closest('[data-section]');
-        if (!link) return;
-        if (link.dataset.section === activeConfigSection) return;
-        configNav.querySelectorAll('.side-link').forEach(item => item.classList.remove('active'));
-        link.classList.add('active');
-
-        window.clearTimeout(sectionTransitionTimer);
-
-        // Fade out current content
-        if (configPanels && !configPanels.classList.contains('hidden')) {
-          configPanels.classList.add('is-switching');
-        }
-        if (configsManagement && !configsManagement.classList.contains('hidden')) {
-          configsManagement.style.opacity = '0';
-          configsManagement.style.transform = 'translateY(6px)';
-          configsManagement.style.transition = 'opacity 220ms ease, transform 220ms ease';
+          continue;
         }
 
-        sectionTransitionTimer = window.setTimeout(() => {
-          renderConfigControls(link.dataset.section);
-          // Fade in new content
-          if (link.dataset.section !== 'configs') {
-            configPanels.classList.remove('is-switching');
-          } else {
-            configsManagement.style.opacity = '1';
-            configsManagement.style.transform = 'translateY(0)';
+        const row = document.createElement('label');
+        row.className = `setting-row setting-${control.type}`;
+        const value = getControlValue(control);
+
+        const label = document.createElement('span');
+        label.className = 'setting-label';
+        label.textContent = control.label;
+        row.appendChild(label);
+
+        if (control.type === 'toggle') {
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = Boolean(value);
+          input.addEventListener('change', () => updateConfigValue(control, input.checked));
+          const switchEl = document.createElement('span');
+          switchEl.className = 'switch';
+          switchEl.appendChild(input);
+          switchEl.appendChild(document.createElement('span'));
+          row.appendChild(switchEl);
+        } else if (control.type === 'range') {
+          const rangeWrap = document.createElement('span');
+          rangeWrap.className = 'range-wrap';
+          const input = document.createElement('input');
+          input.type = 'range';
+          input.min = control.min;
+          input.max = control.max;
+          input.step = control.step;
+          input.value = Number.isFinite(value) ? value : control.fallback;
+          updateRangeFill(input);
+          const output = document.createElement('input');
+          output.type = 'number';
+          output.className = 'range-value-input';
+          output.min = control.min;
+          output.max = control.max;
+          output.step = control.step;
+          output.value = input.value;
+
+          const commitRangeValue = (nextValue) => {
+            const raw = Number(nextValue);
+            const clamped = Number.isFinite(raw) ? Math.min(control.max, Math.max(control.min, raw)) : control.fallback;
+            input.value = clamped;
+            output.value = clamped;
+            updateRangeFill(input);
+            updateConfigValue(control, clamped);
+          };
+
+          input.addEventListener('input', () => commitRangeValue(input.value));
+          output.addEventListener('change', () => commitRangeValue(output.value));
+          rangeWrap.appendChild(input);
+          rangeWrap.appendChild(output);
+          row.appendChild(rangeWrap);
+          if (control.suffix) {
+            const suffix = document.createElement('span');
+            suffix.textContent = control.suffix;
+            suffix.style.marginLeft = '8px';
+            suffix.style.color = '#8c8995';
+            suffix.style.fontSize = '0.8rem';
+            rangeWrap.appendChild(suffix);
           }
-        }, 220);
-      });
-    }
+        } else if (control.type === 'select') {
+          const select = document.createElement('select');
+          for (const option of control.options) {
+            const item = document.createElement('option');
+            item.value = option;
+            item.textContent = option;
+            select.appendChild(item);
+          }
+          select.value = value || control.fallback;
+          select.addEventListener('change', () => updateConfigValue(control, select.value));
+          row.appendChild(select);
+        } else {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = value ?? control.fallback;
+          input.addEventListener('change', () => updateConfigValue(control, input.value));
+          row.appendChild(input);
+        }
 
-    // --- Saved Configs Management ---
-    function renderSavedConfigs() {
-      if (!configsList) return;
-      const configs = getSavedConfigs();
-
-      if (configs.length === 0) {
-        configsList.innerHTML = '<p class="configs-empty">No saved configs yet. Save your current config to get started.</p>';
-        return;
+        rows.appendChild(row);
       }
 
-      configsList.innerHTML = '';
-      configs.forEach((cfg, index) => {
-        const item = document.createElement('div');
-        item.className = 'config-item';
-        item.style.animationDelay = `${index * 40}ms`;
+      cardEl.appendChild(rows);
+      if (configPanels) configPanels.appendChild(cardEl);
+    }
+  }
 
-        const info = document.createElement('div');
-        info.className = 'config-item-info';
-        info.innerHTML = `
+  function renderSavedConfigs() {
+    if (!configsList) return;
+    const configs = getSavedConfigs();
+
+    if (configs.length === 0) {
+      configsList.innerHTML = '<p class="configs-empty">No saved configs yet. Save your current config to get started.</p>';
+      return;
+    }
+
+    configsList.innerHTML = '';
+    for (let index = 0; index < configs.length; index++) {
+      const cfg = configs[index];
+      const item = document.createElement('div');
+      item.className = 'config-item';
+
+      const info = document.createElement('div');
+      info.className = 'config-item-info';
+      info.innerHTML = `
         <div class="config-item-name">${escapeHtml(cfg.name)}</div>
         <div class="config-item-date">${cfg.date || 'Unknown date'}</div>
       `;
 
-        const actions = document.createElement('div');
-        actions.className = 'config-item-actions';
+      const actions = document.createElement('div');
+      actions.className = 'config-item-actions';
 
-        const loadBtn = document.createElement('button');
-        loadBtn.className = 'btn btn-accent';
-        loadBtn.textContent = 'Load';
-        loadBtn.addEventListener('click', () => {
-          configEditor.value = cfg.data;
-          normalizeConfigForGui();
-          // Switch to first config tab
-          activeConfigSection = 'silent';
-          configNav.querySelectorAll('.side-link').forEach(item => item.classList.remove('active'));
-          const silentLink = configNav.querySelector('[data-section="silent"]');
-          if (silentLink) silentLink.classList.add('active');
-          renderConfigControls('silent');
-          showToast(`Config "${cfg.name}" loaded!`, 'success');
-        });
-
-        const exportBtn = document.createElement('button');
-        exportBtn.className = 'btn btn-secondary';
-        exportBtn.textContent = 'Copy';
-        exportBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(cfg.data)
-            .then(() => showToast(`Config "${cfg.name}" copied to clipboard!`, 'success'))
-            .catch(() => showToast('Failed to copy', 'error'));
-        });
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'btn btn-secondary';
-        deleteBtn.textContent = '✕';
-        deleteBtn.style.color = '#ff4058';
-        deleteBtn.addEventListener('click', () => {
-          const configs = getSavedConfigs();
-          configs.splice(index, 1);
-          setSavedConfigs(configs);
-          renderSavedConfigs();
-          showToast(`Config "${cfg.name}" deleted`, 'warning');
-        });
-
-        actions.appendChild(loadBtn);
-        actions.appendChild(exportBtn);
-        actions.appendChild(deleteBtn);
-        item.appendChild(info);
-        item.appendChild(actions);
-        configsList.appendChild(item);
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'btn btn-accent';
+      loadBtn.textContent = 'Load';
+      loadBtn.addEventListener('click', () => {
+        if (configEditor) configEditor.value = cfg.data;
+        showToast(`Config "${cfg.name}" loaded!`, 'success');
+        renderConfigControls(activeConfigSection);
       });
-    }
 
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    // Save named config
-    if (btnSaveConfigNamed) {
-      btnSaveConfigNamed.addEventListener('click', () => {
-        const name = configSaveName.value.trim();
-        if (!name) {
-          showToast('Please enter a config name', 'warning');
-          return;
-        }
-        if (!configEditor.value) {
-          showToast('No config data to save', 'error');
-          return;
-        }
-        const configs = getSavedConfigs();
-        configs.push({
-          name: name,
-          data: configEditor.value,
-          date: new Date().toLocaleString()
-        });
-        setSavedConfigs(configs);
-        configSaveName.value = '';
-        renderSavedConfigs();
-        showToast(`Config "${name}" saved locally!`, 'success');
-      });
-    }
-
-    // Import config
-    if (btnImportConfig) {
-      btnImportConfig.addEventListener('click', () => {
-        const text = configImportText.value.trim();
-        if (!text) {
-          showToast('Paste a config table to import', 'warning');
-          return;
-        }
-        // Validate it looks like a Sacrifice config
-        const match = text.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
-        if (!match) {
-          showToast('Invalid format. Must be a Sacrifice config (getgenv().Sacrifice = { ... })', 'error');
-          return;
-        }
-        configEditor.value = text;
-        normalizeConfigForGui();
-        showToast('Config imported! Switch to a section to see changes.', 'success');
-        configImportText.value = '';
-      });
-    }
-
-    // Copy export
-    if (btnCopyExport) {
-      btnCopyExport.addEventListener('click', () => {
-        const text = configExportText.value;
-        if (!text) {
-          showToast('No config to copy', 'warning');
-          return;
-        }
-        navigator.clipboard.writeText(text)
-          .then(() => showToast('Config copied to clipboard!', 'success'))
+      const exportBtn = document.createElement('button');
+      exportBtn.className = 'btn btn-secondary';
+      exportBtn.textContent = 'Copy';
+      exportBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(cfg.data)
+          .then(() => showToast(`Config "${cfg.name}" copied!`, 'success'))
           .catch(() => showToast('Failed to copy', 'error'));
       });
-    }
 
-    // --- Get Script Button & Modal ---
-    function generateObfuscatedScript(token) {
-      // Gentle obfuscation: base64 encode strings, use string.char for some parts
-      const serverUrl = `wss://getsacrifice.bonto.run?token=${token}`;
-      const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
-      function generateUnobfuscatedScript(userKey) {
-        const script = `print("Sacrifice loader started")
-local SERVER_URL = "wss://getsacrifice.bonto.run?token=${userKey}"
-local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-secondary';
+      deleteBtn.textContent = '✕';
+      deleteBtn.style.color = '#ff4058';
+      deleteBtn.addEventListener('click', () => {
+        const configsArray = getSavedConfigs();
+        configsArray.splice(index, 1);
+        setSavedConfigs(configsArray);
+        renderSavedConfigs();
+        showToast(`Config "${cfg.name}" deleted`, 'warning');
+      });
+
+      actions.appendChild(loadBtn);
+      actions.appendChild(exportBtn);
+      actions.appendChild(deleteBtn);
+      item.appendChild(info);
+      item.appendChild(actions);
+      configsList.appendChild(item);
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // ============================================================
+  // SCRIPT GENERATION
+  // ============================================================
+  function generateScript(token) {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.host;
+    const serverUrl = `${wsProtocol}//${wsHost}?token=${token}`;
+    const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
+
+    return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
+print("Sacrifice loader starting...")
+
+local SERVER_URL = "${serverUrl}"
+local SOURCE_URL = "${sourceUrl}"
+
+local MAX_RETRIES = 3
+local RETRY_DELAY = 2
+
 local HttpService = game:GetService("HttpService")
 
-    // Base64 encode the URLs
-    const b64Server = btoa(serverUrl);
-    const b64Source = btoa(sourceUrl);
 local function deepMerge(target, source)
-    if typeof(target) ~= "table" or typeof(source) ~= "table" then
-        return source
-    end
-
-    // Build the obfuscated script - readable enough but not plain text
-    const script = `-- Sacrifice Loader | Generated ${ new Date().toLocaleString() }
-        --Do not share this script, it contains your personal session token.
-        for key, value in pairs(source) do
-          if typeof (value) == "table" and typeof (target[key]) == "table" then
-        deepMerge(target[key], value)
+    if type(target) ~= "table" or type(source) ~= "table" then return source end
+    for k, v in pairs(source) do
+        if type(v) == "table" and type(target[k]) == "table" then
+            deepMerge(target[k], v)
         else
-        target[key] = value
+            target[k] = v
         end
-        end
-
-local _0x = {}
-        _0x._d = function (s) local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/' return (s: gsub('.', function (x) local r, f = '', (b: find(x) - 1) for i = 6, 1, -1 do r = r..(f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0') end return r end)..'0000'): gsub('%d%d%d%d%d%d%d%d', function (x) if (#x~=8) then return '' end local c = 0 for i = 1, 8 do c = c + (x: sub(i, i) == '1' and 2 ^ (8 - i) or 0) end return string.char(c) end) end
-_0x._s = _0x._d("${b64Server}")
-_0x._u = _0x._d("${b64Source}")
-return target
+    end
+    return target
 end
 
-local _svc = game: GetService(string.char(72, 116, 116, 112, 83, 101, 114, 118, 105, 99, 101))
 local function applyConfig(configText)
-    local beforeLower = getgenv().sacrifice
-    local beforeUpper = getgenv().Sacrifice
-
-print("Sacrifice loader started")
-    local configFunc, compileErr = loadstring(configText)
-if not configFunc then
-return false, "Failed to compile config: "..tostring(compileErr)
-end
-
-local function _merge(t, s)
-if typeof (t) ~= "table" or typeof (s) ~= "table" then return s end
-for k, v in pairs(s) do
-  if typeof (v) == "table" and typeof (t[k]) == "table" then _merge(t[k], v)
-        else t[k] = v end
-    local runOk, runErr = pcall(configFunc)
-if not runOk then
-return false, "Failed to execute config: "..tostring(runErr)
-end
-return t
-
+    local before = getgenv().sacrifice or getgenv().Sacrifice
+    local fn, err = loadstring(configText)
+    if not fn then warn("Compile error: "..err) return false end
+    local ok, err = pcall(fn)
+    if not ok then warn("Execute error: "..err) return false end
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
-if typeof (newConfig) ~= "table" then
-return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
+    if type(newConfig) ~= "table" then warn("No config table found") return false end
+    local live = before
+    if type(live) == "table" then deepMerge(live, newConfig) else live = newConfig end
+    getgenv().sacrifice = live
+    getgenv().Sacrifice = live
+    return true
 end
 
-    local liveConfig = beforeLower or beforeUpper
-if typeof (liveConfig) == "table" then
-deepMerge(liveConfig, newConfig)
+local function connectWebSocket(url, retryCount)
+    retryCount = retryCount or 0
+    local success, socket = pcall(function() return WebSocket.connect(url) end)
+    if success and socket then
+        print("WebSocket connected")
+        return socket
+    elseif retryCount < MAX_RETRIES then
+        print("WebSocket failed, retrying in "..RETRY_DELAY.."s... ("..(retryCount+1).."/"..MAX_RETRIES..")")
+        wait(RETRY_DELAY)
+        return connectWebSocket(url, retryCount + 1)
     else
-liveConfig = newConfig
+        warn("WebSocket failed after "..MAX_RETRIES.." attempts")
+        return nil
+    end
 end
 
-local function _apply(ct)
-    local _bL = getgenv().sacrifice
-    local _bU = getgenv().Sacrifice
-    local fn, ce = loadstring(ct)
-if not fn then return false, "Failed to compile config: "..tostring(ce) end
-    local ok, re = pcall(fn)
-if not ok then return false, "Failed to execute config: "..tostring(re) end
-    local nc = getgenv().sacrifice or getgenv().Sacrifice
-if typeof (nc) ~= "table" then return false, "Config did not create getgenv().sacrifice" end
-    local lc = _bL or _bU
-if typeof (lc) == "table" then _merge(lc, nc) else lc = nc end
-getgenv().sacrifice = lc
-getgenv().Sacrifice = lc
-getgenv().sacrifice = liveConfig
-getgenv().Sacrifice = liveConfig
-return true
-end
+local socket = connectWebSocket(SERVER_URL)
+if not socket then warn("Could not establish WebSocket connection") return end
 
-local _ws
-local _ok, _er = pcall(function () _ws = WebSocket.connect(_0x._s) end)
-if not _ok or not _ws then warn("WebSocket failed:", _er) return end
-local socket
-local ok, err = pcall(function ()
-    socket = WebSocket.connect(SERVER_URL)
+local loaded = false
+
+task.spawn(function()
+    while socket and socket.OnMessage do
+        wait(25)
+        pcall(function() socket:Send("ping") end)
+    end
 end)
 
-if not ok or not socket then
-warn("WebSocket failed:", err)
-return
-end
-
-print("Connected to Sacrifice WebSocket")
-local _loaded = false
-
-local hasLoadedSource = false
-
-socket.OnMessage: Connect(function (msg)
-    print("Received packet")
-
-    local decodedOk, data = pcall(function ()
-        return HttpService: JSONDecode(msg)
-    end)
-
-if not decodedOk then
-warn("Could not decode packet")
-return
-end
-
-if data.type ~= "init" and data.type ~= "update" then
-return
-end
-
-print("Lua configuration text received")
-
-    local configOk, configErr = applyConfig(data.config)
-if not configOk then
-warn(configErr)
-return
-end
-
-print("Website config applied")
-
-if hasLoadedSource then
-print("Live config updated")
-return
-end
-
-hasLoadedSource = true
-print("Initializing main source script...")
-
-_ws.OnMessage: Connect(function (msg)
-    local dok, data = pcall(function () return _svc: JSONDecode(msg) end)
-if not dok then return end
-if data.type ~= "init" and data.type ~= "update" then return end
-    local cok, cer = _apply(data.config)
-if not cok then warn(cer) return end
-print("Config applied")
-if _loaded then return end
-_loaded = true
-    local sok, ser = pcall(function ()
-        local src = game: HttpGet(_0x._u)
-        loadstring(src)()
-    local sourceOk, sourceErr = pcall(function ()
-        local source = game: HttpGet(SOURCE_URL)
-        print("Source downloaded, length:", #source)
-        loadstring(source)()
-    end)
-    if sok then print("Source executed")
-    else warn("Source error: "..tostring(ser)) _loaded = false end
-
-if sourceOk then
-print("Source script executed successfully")
+socket.OnMessage:Connect(function(msg)
+    if msg == "ping" then return end
+    local ok, data = pcall(function() return HttpService:JSONDecode(msg) end)
+    if not ok or (data.type ~= "init" and data.type ~= "update") then return end
+    if not applyConfig(data.config) then return end
+    if loaded then print("Config updated") return end
+    loaded = true
+    local srcSuccess, src = pcall(function() return game:HttpGet(SOURCE_URL) end)
+    if srcSuccess and src then
+        local fn, err = loadstring(src)
+        if fn then pcall(fn) print("Source loaded") else warn("Source error: "..err) end
     else
-warn("Source script error: "..tostring(sourceErr))
-hasLoadedSource = false
-end
+        warn("Failed to download source")
+    end
 end)
 
-_ws.OnClose: Connect(function () warn("Sacrifice WebSocket closed") end)`;
-socket.OnClose:Connect(function()
-    warn("Sacrifice WebSocket closed")
-end)`;
+socket.OnClose:Connect(function() warn("WebSocket closed") end)
 
-return script;
+print("Sacrifice ready - waiting for config...")`;
   }
 
-if (btnGetScript) {
-  btnGetScript.addEventListener('click', () => {
-    if (!activeSessionToken) {
-      showToast('You need to be logged in to get your script', 'error');
-      return;
-    }
-    const script = generateObfuscatedScript(activeSessionToken);
-    const script = generateUnobfuscatedScript(activeSessionToken);
-    scriptOutput.value = script;
-    // Increment execution count
-    if (activeUsername) {
-      incrementExecutionCount(activeUsername);
-      updateUserPanelDisplay();
-    }
-    getScriptModal.classList.remove('hidden');
-  });
-}
-
-if (btnCloseScript) {
-  btnCloseScript.addEventListener('click', () => {
-    getScriptModal.classList.add('hidden');
-  });
-}
-
-if (getScriptModal) {
-  getScriptModal.addEventListener('click', (e) => {
-    if (e.target === getScriptModal) {
-      getScriptModal.classList.add('hidden');
-    }
-  });
-}
-
-if (btnCopyScript) {
-  btnCopyScript.addEventListener('click', () => {
-    const text = scriptOutput.value;
-    navigator.clipboard.writeText(text)
-      .then(() => showToast('Script copied to clipboard!', 'success'))
-      .catch(() => showToast('Failed to copy', 'error'));
-  });
-}
-
-// --- User Panel Modal ---
-if (btnUserPanel) {
-  btnUserPanel.addEventListener('click', () => {
-    updateUserPanelDisplay();
-    userPanelModal.classList.remove('hidden');
-  });
-}
-
-if (btnCloseUserPanel) {
-  btnCloseUserPanel.addEventListener('click', () => {
-    userPanelModal.classList.add('hidden');
-  });
-}
-
-if (userPanelModal) {
-  userPanelModal.addEventListener('click', (e) => {
-    if (e.target === userPanelModal) {
-      userPanelModal.classList.add('hidden');
-    }
-  });
-}
-
-if (btnCopyKey) {
-  btnCopyKey.addEventListener('click', () => {
-    if (activeSessionToken) {
-      navigator.clipboard.writeText(activeSessionToken)
-        .then(() => showToast('Key copied to clipboard!', 'success'))
-        .catch(() => showToast('Failed to copy', 'error'));
-    }
-  });
-}
-
-// --- API Handlers ---
-
-// Submit Login
-loginForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideAuthToast();
-
-  const username = document.getElementById('login-username').value;
-  const password = document.getElementById('login-password').value;
-
-  try {
-    const response = await fetch(apiUrl('/api/auth/login'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      showAuthToast(result.error || 'Authentication failed');
-      return;
-    }
-
-    showToast('Logged in successfully', 'success');
-    activeSessionToken = result.user.token;
-    initializeDashboard(result.user.username);
-  } catch (err) {
-    showAuthToast('Failed to connect to the authentication server');
-  }
-});
-
-// Submit Sign Up
-signupForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  hideAuthToast();
-
-  const username = document.getElementById('reg-username').value;
-  const password = document.getElementById('reg-password').value;
-  const licenseKey = document.getElementById('reg-license').value;
-
-  try {
-    const response = await fetch(apiUrl('/api/auth/register'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, licenseKey })
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      showAuthToast(result.error || 'Sign up failed');
-      return;
-    }
-
-    showToast(result.message || 'Account registered!', 'success');
-    signupForm.classList.add('hidden');
-    loginForm.classList.remove('hidden');
-    document.getElementById('login-username').value = username;
-  } catch (err) {
-    showAuthToast('Server connection failure during sign up');
-  }
-});
-
-// Load configuration
-async function loadConfig() {
-  try {
-    const response = await fetch(apiUrl('/api/config'), {
-      credentials: 'include'
-    });
-    const result = await parseApiResponse(response);
-    if (response.ok) {
-      configEditor.value = result.config;
-      normalizeConfigForGui();
-      renderConfigControls(activeConfigSection);
-      saveStatus.textContent = 'Last saved version loaded';
-      showToast('Configuration loaded successfully', 'success');
-    } else {
-      showToast(result.error || 'Failed to load configuration', 'error');
-    }
-  } catch (err) {
-    showToast(`Could not reach ${apiUrl('/api/config') || '/api/config'} from ${window.location.host}`, 'error');
-  }
-}
-
-// Save configuration
-async function saveConfig() {
-  const configData = configEditor.value;
-
-  try {
-    const response = await fetch(apiUrl('/api/config/save'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: configData })
-    });
-
-    const result = await parseApiResponse(response);
-    if (response.ok) {
-      saveStatus.textContent = 'All changes saved to cloud';
-      showToast('Configuration saved successfully!', 'success');
-    } else {
-      showToast(result.error || 'Failed to save configuration', 'error');
-    }
-  } catch (err) {
-    showToast('Connection error during configuration save', 'error');
-  }
-}
-
-// Activate / Broadcast config signal
-async function activateConfig() {
-  const configData = configEditor.value;
-
-  const parseJsonResponse = async (response, actionName) => {
-    const text = await response.text();
+  // ============================================================
+  // API HANDLERS
+  // ============================================================
+  async function loadConfig() {
     try {
-      return text ? JSON.parse(text) : {};
-    } catch (err) {
-      throw new Error(`${actionName} failed at ${response.url} (${response.status}): ${text.slice(0, 180)}`);
-    }
-  };
-
-  const originalButtonText = btnActivate.textContent;
-  btnActivate.disabled = true;
-  btnActivate.textContent = 'ACTIVATING...';
-
-  try {
-    const response = await fetch(apiUrl('/api/config/push'), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: configData })
-    });
-
-    const result = await parseJsonResponse(response, 'Activate');
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to activate config.');
-    }
-
-    const count = Number(result.connectedClients || 0);
-    if (count > 0) {
-      showToast(`Configuration activated for ${count} connection${count === 1 ? '' : 's'}!`, 'success');
-    } else {
-      showToast('Config saved, but no matching executor WebSocket is connected.', 'error');
-    }
-    updateConnectionStatus();
-  } catch (err) {
-    console.error('Activation error:', err);
-    showToast(err.message || `Activation request failed from ${window.SACRIFICE_APP_BUILD}`, 'error');
-  } finally {
-    btnActivate.disabled = false;
-    btnActivate.textContent = originalButtonText;
-  }
-}
-
-// Poll active connection count from server
-async function updateConnectionStatus() {
-  try {
-    const response = await fetch(apiUrl('/api/connections'), {
-      credentials: 'include'
-    });
-    const result = await response.json();
-
-    if (response.ok) {
-      const count = result.count;
-      if (count > 0) {
-        statusDot.className = 'status-pulse green';
-        statusText.textContent = `${count} Executor Connection${count > 1 ? 's' : ''} Active`;
+      const response = await fetch(apiUrl('/api/config'), { credentials: 'include' });
+      const result = await parseApiResponse(response);
+      if (response.ok && configEditor) {
+        configEditor.value = result.config;
+        renderConfigControls(activeConfigSection);
+        if (saveStatus) saveStatus.textContent = 'Loaded from cloud';
+        showToast('Configuration loaded', 'success');
       } else {
-        statusDot.className = 'status-pulse yellow';
-        statusText.textContent = 'No Executors Connected (Idle)';
+        showToast(result.error || 'Failed to load', 'error');
       }
+    } catch (err) {
+      showToast('Could not reach server', 'error');
     }
-  } catch (err) {
-    console.warn("Connection counter request failed");
   }
-}
 
-// --- Dashboard Setup ---
-function initializeDashboard(username) {
-  authContainer.classList.add('hidden');
-  dashboardContainer.classList.remove('hidden');
+  async function saveConfig() {
+    if (!configEditor) return;
+    const configData = configEditor.value;
 
-  activeUsername = username;
-  userDisplay.textContent = `User: ${username}`;
-
-  // Fetch user data from Supabase via backend
-  fetchUserDataFromSupabase(username);
-
-  // Load user's configuration
-  loadConfig();
-
-  // Start background status updates
-  updateConnectionStatus();
-  connectionCheckInterval = setInterval(updateConnectionStatus, 15000);
-  // Load a random phrase once
-  loadRandomPhrase(username);
-}
-
-// --- Session Restoration ---
-async function checkSession() {
-  try {
-    const response = await fetch(apiUrl('/api/auth/session'), {
-      credentials: 'include'
-    });
-    const result = await response.json();
-
-    if (response.ok && result.authenticated) {
-      activeSessionToken = result.token;
-      initializeDashboard(result.username);
+    try {
+      const response = await fetch(apiUrl('/api/config/save'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: configData })
+      });
+      const result = await parseApiResponse(response);
+      if (response.ok) {
+        if (saveStatus) saveStatus.textContent = 'Saved to cloud';
+        showToast('Configuration saved!', 'success');
+      } else {
+        showToast(result.error || 'Failed to save', 'error');
+      }
+    } catch (err) {
+      showToast('Connection error', 'error');
     }
-  } catch (err) {
-    // No valid session, stay on login page
   }
-}
 
-checkSession();
+  async function activateConfig() {
+    if (!configEditor) return;
+    const configData = configEditor.value;
+    if (!btnActivate) return;
 
-// Action listeners
-btnLoad.addEventListener('click', loadConfig);
-btnSave.addEventListener('click', saveConfig);
-btnActivate.addEventListener('click', activateConfig);
+    const originalText = btnActivate.textContent;
+    btnActivate.disabled = true;
+    btnActivate.textContent = 'ACTIVATING...';
 
-// --- Luau autocompletion for the config textarea ---
-if (configEditor) {
-  const luauCompletions = [
-    'false', 'true', 'nil', 'function', 'end', 'local', 'return', 'if', 'then', 'elseif', 'else',
-    'for', 'in', 'while', 'do', 'break', 'repeat', 'until', 'and', 'or', 'not', 'table', 'math', 'string',
-    'pairs', 'ipairs', 'next', 'continue', 'typeof', 'typeof', 'warn', 'print', 'spawn', 'delay'
-  ];
+    try {
+      const response = await fetch(apiUrl('/api/config/push'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ config: configData })
+      });
+      const result = await parseApiResponse(response);
+      if (!response.ok) throw new Error(result.error || 'Activation failed');
+      const count = Number(result.connectedClients || 0);
+      if (count > 0) {
+        showToast(`Activated for ${count} connection${count === 1 ? '' : 's'}!`, 'success');
+      } else {
+        showToast('No executor connected', 'warning');
+      }
+      updateConnectionStatus();
+    } catch (err) {
+      showToast(err.message || 'Activation failed', 'error');
+    } finally {
+      btnActivate.disabled = false;
+      btnActivate.textContent = originalText;
+    }
+  }
 
-  configEditor.addEventListener('keydown', (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const el = configEditor;
-      const start = el.selectionStart;
-      const end = el.selectionEnd;
-      const before = el.value.slice(0, start);
-      const after = el.value.slice(end);
-
-      const m = before.match(/([A-Za-z_][A-Za-z0-9_]*)$/);
-      if (m) {
-        const prefix = m[1];
-        const candidate = luauCompletions.find(c => c !== prefix && c.startsWith(prefix));
-        if (candidate) {
-          const newBefore = before.slice(0, -prefix.length) + candidate;
-          el.value = newBefore + after;
-          const caret = newBefore.length;
-          el.setSelectionRange(caret, caret);
-          return;
+  async function updateConnectionStatus() {
+    try {
+      const response = await fetch(apiUrl('/api/connections'), { credentials: 'include' });
+      const result = await response.json();
+      if (response.ok && statusDot && statusText) {
+        const count = result.count;
+        if (count > 0) {
+          statusDot.className = 'status-pulse green';
+          statusText.textContent = `${count} Executor Connection${count > 1 ? 's' : ''} Active`;
+        } else {
+          statusDot.className = 'status-pulse yellow';
+          statusText.textContent = 'No Executors Connected';
         }
       }
-
-      const newBefore = before + '  ';
-      el.value = newBefore + after;
-      const caret = newBefore.length;
-      el.setSelectionRange(caret, caret);
-    }
-  });
-}
-
-// Logout action
-btnLogout.addEventListener('click', async () => {
-  try {
-    await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
-    showToast('Logged out successfully', 'success');
-
-    activeSessionToken = null;
-    if (connectionCheckInterval) {
-      clearInterval(connectionCheckInterval);
-    }
-
-    dashboardContainer.classList.add('hidden');
-    authContainer.classList.remove('hidden');
-
-    loginForm.reset();
-    signupForm.reset();
-  } catch (err) {
-    showToast('Logout connection error', 'error');
+    } catch (err) { console.warn("Connection check failed"); }
   }
-});
+
+  async function initializeDashboard(username) {
+    if (!authContainer || !dashboardContainer) return;
+    authContainer.classList.add('hidden');
+    dashboardContainer.classList.remove('hidden');
+    activeUsername = username;
+    if (userDisplay) userDisplay.textContent = `User: ${username}`;
+    await fetchUserDataFromSupabase(username);
+    await fetchLicenseKey(username);
+    updateUserPanelDisplay();
+    await loadConfig();
+    updateConnectionStatus();
+    if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+    connectionCheckInterval = setInterval(updateConnectionStatus, 15000);
+    loadRandomPhrase(username);
+  }
+
+  async function checkSession() {
+    try {
+      const response = await fetch(apiUrl('/api/auth/session'), { credentials: 'include' });
+      const result = await response.json();
+      if (response.ok && result.authenticated) {
+        activeSessionToken = result.token;
+        initializeDashboard(result.username);
+      }
+    } catch (err) { console.log('No active session'); }
+  }
+
+  // ============================================================
+  // EVENT LISTENERS
+  // ============================================================
+  if (toSignup) {
+    toSignup.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginForm && signupForm) {
+        loginForm.classList.add('hidden');
+        signupForm.classList.remove('hidden');
+        hideAuthToast();
+      }
+    });
+  }
+
+  if (toLogin) {
+    toLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (signupForm && loginForm) {
+        signupForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        hideAuthToast();
+      }
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAuthToast();
+      const username = document.getElementById('login-username')?.value;
+      const password = document.getElementById('login-password')?.value;
+      if (!username || !password) {
+        showAuthToast('Please enter username and password');
+        return;
+      }
+      try {
+        const response = await fetch(apiUrl('/api/auth/login'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          showAuthToast(result.error || 'Authentication failed');
+          return;
+        }
+        showToast('Logged in successfully', 'success');
+        activeSessionToken = result.user.token;
+        initializeDashboard(result.user.username);
+      } catch (err) {
+        showAuthToast('Failed to connect to server');
+      }
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAuthToast();
+      const username = document.getElementById('reg-username')?.value;
+      const password = document.getElementById('reg-password')?.value;
+      const licenseKey = document.getElementById('reg-license')?.value;
+      if (!username || !password || !licenseKey) {
+        showAuthToast('All fields are required');
+        return;
+      }
+      try {
+        const response = await fetch(apiUrl('/api/auth/register'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, licenseKey })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          showAuthToast(result.error || 'Sign up failed');
+          return;
+        }
+        showToast(result.message || 'Account registered!', 'success');
+        if (signupForm && loginForm) {
+          signupForm.classList.add('hidden');
+          loginForm.classList.remove('hidden');
+        }
+        const loginUsername = document.getElementById('login-username');
+        if (loginUsername) loginUsername.value = username;
+      } catch (err) {
+        showAuthToast('Server connection failure');
+      }
+    });
+  }
+
+  if (btnLoad) btnLoad.addEventListener('click', loadConfig);
+  if (btnSave) btnSave.addEventListener('click', saveConfig);
+  if (btnActivate) btnActivate.addEventListener('click', activateConfig);
+
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      try {
+        await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
+        showToast('Logged out', 'success');
+        activeSessionToken = null;
+        activeLicenseKey = null;
+        if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+        dashboardContainer.classList.add('hidden');
+        authContainer.classList.remove('hidden');
+        if (loginForm) loginForm.reset();
+        if (signupForm) signupForm.reset();
+      } catch (err) {
+        showToast('Logout error', 'error');
+      }
+    });
+  }
+
+  if (btnGetScript) {
+    btnGetScript.addEventListener('click', () => {
+      if (!activeSessionToken) {
+        showToast('Please login first', 'error');
+        return;
+      }
+      const script = generateScript(activeSessionToken);
+      if (scriptOutput) scriptOutput.value = script;
+      if (activeUsername) {
+        incrementExecutionCount(activeUsername);
+        updateUserPanelDisplay();
+      }
+      if (getScriptModal) getScriptModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseScript) {
+    btnCloseScript.addEventListener('click', () => {
+      if (getScriptModal) getScriptModal.classList.add('hidden');
+    });
+  }
+
+  if (getScriptModal) {
+    getScriptModal.addEventListener('click', (e) => {
+      if (e.target === getScriptModal) getScriptModal.classList.add('hidden');
+    });
+  }
+
+  if (btnCopyScript) {
+    btnCopyScript.addEventListener('click', () => {
+      const text = scriptOutput?.value;
+      if (text) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast('Script copied!', 'success'))
+          .catch(() => showToast('Failed to copy', 'error'));
+      }
+    });
+  }
+
+  if (btnUserPanel) {
+    btnUserPanel.addEventListener('click', async () => {
+      await fetchUserDataFromSupabase(activeUsername);
+      await fetchLicenseKey(activeUsername);
+      updateUserPanelDisplay();
+      if (userPanelModal) userPanelModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseUserPanel) {
+    btnCloseUserPanel.addEventListener('click', () => {
+      if (userPanelModal) userPanelModal.classList.add('hidden');
+    });
+  }
+
+  if (userPanelModal) {
+    userPanelModal.addEventListener('click', (e) => {
+      if (e.target === userPanelModal) userPanelModal.classList.add('hidden');
+    });
+  }
+
+  if (btnCopyKey) {
+    btnCopyKey.addEventListener('click', () => {
+      if (activeLicenseKey) {
+        navigator.clipboard.writeText(activeLicenseKey)
+          .then(() => showToast('License key copied!', 'success'))
+          .catch(() => showToast('Failed to copy', 'error'));
+      }
+    });
+  }
+
+  if (btnSaveConfigNamed) {
+    btnSaveConfigNamed.addEventListener('click', () => {
+      const name = configSaveName?.value.trim();
+      if (!name) {
+        showToast('Enter a config name', 'warning');
+        return;
+      }
+      if (!configEditor?.value) {
+        showToast('No config to save', 'error');
+        return;
+      }
+      const configs = getSavedConfigs();
+      configs.push({
+        name: name,
+        data: configEditor.value,
+        date: new Date().toLocaleString()
+      });
+      setSavedConfigs(configs);
+      if (configSaveName) configSaveName.value = '';
+      renderSavedConfigs();
+      showToast(`Config "${name}" saved!`, 'success');
+    });
+  }
+
+  if (btnImportConfig) {
+    btnImportConfig.addEventListener('click', () => {
+      const text = configImportText?.value.trim();
+      if (!text) {
+        showToast('Paste a config to import', 'warning');
+        return;
+      }
+      const match = text.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
+      if (!match) {
+        showToast('Invalid Sacrifice config format', 'error');
+        return;
+      }
+      if (configEditor) configEditor.value = text;
+      showToast('Config imported!', 'success');
+      if (configImportText) configImportText.value = '';
+      renderConfigControls(activeConfigSection);
+    });
+  }
+
+  if (btnCopyExport) {
+    btnCopyExport.addEventListener('click', () => {
+      const text = configExportText?.value;
+      if (!text) {
+        showToast('No config to export', 'warning');
+        return;
+      }
+      navigator.clipboard.writeText(text)
+        .then(() => showToast('Config copied!', 'success'))
+        .catch(() => showToast('Failed to copy', 'error'));
+    });
+  }
+
+  if (btnSettings && settingsModal) {
+    btnSettings.addEventListener('click', () => {
+      if (settingLogoUrl) {
+        const savedLogo = localStorage.getItem('sacrifice_logo_url') || '';
+        settingLogoUrl.value = savedLogo;
+      }
+      settingsModal.classList.remove('hidden');
+    });
+  }
+
+  if (btnCloseSettings && settingsModal) {
+    btnCloseSettings.addEventListener('click', () => {
+      settingsModal.classList.add('hidden');
+    });
+  }
+
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) settingsModal.classList.add('hidden');
+    });
+  }
+
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', () => {
+      const url = settingLogoUrl?.value.trim() || '';
+      if (url) {
+        localStorage.setItem('sacrifice_logo_url', url);
+        showToast('Logo updated!', 'success');
+      } else {
+        localStorage.removeItem('sacrifice_logo_url');
+        showToast('Logo reset', 'info');
+      }
+      applyBrandingLogo();
+      if (settingsModal) settingsModal.classList.add('hidden');
+    });
+  }
+
+  if (configNav) {
+    configNav.addEventListener('click', (event) => {
+      const link = event.target.closest('[data-section]');
+      if (!link) return;
+      if (link.dataset.section === activeConfigSection) return;
+      document.querySelectorAll('.side-link').forEach(item => item.classList.remove('active'));
+      link.classList.add('active');
+      if (sectionTransitionTimer) clearTimeout(sectionTransitionTimer);
+      if (configPanels && !configPanels.classList.contains('hidden')) {
+        configPanels.style.opacity = '0';
+        configPanels.style.transform = 'translateY(10px)';
+      }
+      if (configsManagement && !configsManagement.classList.contains('hidden')) {
+        configsManagement.style.opacity = '0';
+        configsManagement.style.transform = 'translateY(10px)';
+      }
+      sectionTransitionTimer = setTimeout(() => {
+        renderConfigControls(link.dataset.section);
+        if (configPanels) {
+          configPanels.style.opacity = '1';
+          configPanels.style.transform = 'translateY(0)';
+          configPanels.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        }
+        if (configsManagement) {
+          configsManagement.style.opacity = '1';
+          configsManagement.style.transform = 'translateY(0)';
+          configsManagement.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        }
+      }, 200);
+    });
+  }
+
+  if (configEditor) {
+    configEditor.style.display = 'none';
+  }
+
+  // Initialize
+  applyBrandingLogo();
+  checkSession();
 });
