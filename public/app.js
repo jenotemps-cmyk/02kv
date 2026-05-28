@@ -273,12 +273,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const silentFovControls = [
     { type: 'toggle', label: 'FOV Enabled', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'toggle', label: 'FOV Visible', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'FOV Radius', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
+    {
+      type: 'toggle',
+      label: 'FOV Visible',
+      pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)',
+      fallback: false,
+      // Sacrifice reads legacy FOV.Visible at runtime — keep in sync with Settings.Fov
+      mirrors: ['(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Visible\\s*=\\s*)(true|false)(\\s*,)']
+    },
+    {
+      type: 'range',
+      label: 'FOV Radius',
+      pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)',
+      fallback: 350,
+      min: 0,
+      max: 1000,
+      step: 5,
+      suffix: 'px',
+      mirrors: ['(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Radius\\s*=\\s*)([0-9.]+)(\\s*,)']
+    },
     { type: 'range', label: 'FOV Thickness', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Thickness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
     { type: 'range', label: 'FOV Transparency', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Transparency\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
     { type: 'toggle', label: 'FOV Filled', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Filled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'text', label: 'FOV Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Color\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' }
+    {
+      type: 'text',
+      label: 'FOV Color (R,G,B)',
+      pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Color\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)',
+      fallback: '0, 17, 255',
+      valueMode: 'raw',
+      mirrors: ['(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)']
+    }
   ];
 
   const silentLegitControls = [
@@ -310,9 +334,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'select', label: 'Hit Part (Legacy)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bHitPart\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Closest', options: ['Closest', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso', 'Closest Point'] },
     { type: 'range', label: 'Horizontal Prediction', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?HorizontalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
     { type: 'range', label: 'Vertical Prediction', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?VerticalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
-    { type: 'toggle', label: 'Legacy FOV Visible', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Visible\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Legacy FOV Radius', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Radius\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
-    { type: 'text', label: 'Legacy FOV Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' },
     { type: 'select', label: 'Legacy FOV Mode', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Mode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Circle', options: ['Circle', 'Box', '3D'] }
   ];
 
@@ -686,19 +707,86 @@ document.addEventListener('DOMContentLoaded', () => {
     return String(value);
   }
 
+  function replaceConfigPattern(lua, pattern, formatted) {
+    const re = new RegExp(pattern, 'm');
+    if (!re.test(lua)) return { lua, ok: false };
+    return { lua: lua.replace(re, `$1${formatted}$3`), ok: true };
+  }
+
+  function refreshConfigExport() {
+    if (configExportText && configEditor) {
+      configExportText.value = configEditor.value || '';
+    }
+  }
+
+  /** Inject legacy FOV under Silent Aim if missing (older saves only had Settings.Fov). */
+  function ensureLegacySilentAimFov(lua) {
+    if (!lua || !/\['Silent Aim'\]/.test(lua)) return lua;
+    if (/\['Silent Aim'\][\s\S]*?\bFOV\s*=\s*\{/.test(lua)) return lua;
+
+    const visM = lua.match(/\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Visible'\]\s*=\s*(true|false)/);
+    const radM = lua.match(/\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Radius'\]\s*=\s*([0-9.]+)/);
+    const colM = lua.match(/\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Color'\]\s*=\s*(Color3\.fromRGB\([^)]+\))/);
+    const block = `\n        FOV = {\n            Visible = ${visM ? visM[1] : 'false'},\n            Radius = ${radM ? radM[1] : '350'},\n            Color = ${colM ? colM[1] : 'Color3.fromRGB(0, 17, 255)'},\n            Mode = "Circle",\n        },`;
+
+    if (/HitChance\s*=\s*[0-9.]+,/.test(lua)) {
+      return lua.replace(/(HitChance\s*=\s*[0-9.]+,)/, `$1${block}`);
+    }
+    return lua.replace(/(\['Silent Aim'\]\s*=\s*\{[\s\S]*?)(\n    \},\s*\n\s*\['Trigger Bot'\])/, `$1${block}$2`);
+  }
+
+  /** Keep Settings.Fov and legacy FOV blocks aligned (script uses legacy FOV for drawing). */
+  function syncConfigFieldMirrors(lua) {
+    if (!lua) return lua;
+    let out = ensureLegacySilentAimFov(lua);
+
+    const pairs = [
+      {
+        read: /(\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Visible'\]\s*=\s*)(true|false)/,
+        write: /(\['Silent Aim'\][\s\S]*?\bFOV\s*=\s*\{[\s\S]*?Visible\s*=\s*)(true|false)(\s*,)/
+      },
+      {
+        read: /(\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Radius'\]\s*=\s*)([0-9.]+)/,
+        write: /(\['Silent Aim'\][\s\S]*?\bFOV\s*=\s*\{[\s\S]*?Radius\s*=\s*)([0-9.]+)(\s*,)/
+      },
+      {
+        read: /(\['Silent Aim'\][\s\S]*?\['Settings'\][\s\S]*?\['Fov'\][\s\S]*?\['Color'\]\s*=\s*Color3\.fromRGB\()([^)]+)(\))/,
+        write: /(\['Silent Aim'\][\s\S]*?\bFOV\s*=\s*\{[\s\S]*?Color\s*=\s*Color3\.fromRGB\()([^)]+)(\)\s*,)/
+      }
+    ];
+
+    for (const pair of pairs) {
+      const match = out.match(pair.read);
+      if (!match) continue;
+      const formatted = match[2];
+      if (pair.write.test(out)) {
+        out = out.replace(pair.write, `$1${formatted}$3`);
+      }
+    }
+    return out;
+  }
+
   function updateConfigValue(control, value) {
     if (!configEditor || !configEditor.value) return;
-    const pattern = new RegExp(control.pattern, 'm');
     const formatted = formatControlValue(control, value);
-    if (!pattern.test(configEditor.value)) {
-      showToast(`Could not find ${control.label}`, 'warning');
+    const primary = replaceConfigPattern(configEditor.value, control.pattern, formatted);
+    if (!primary.ok) {
+      showToast(`Could not find ${control.label} in config`, 'warning');
       return;
     }
-    configEditor.value = configEditor.value.replace(pattern, `$1${formatted}$3`);
+
+    let lua = primary.lua;
+    if (Array.isArray(control.mirrors)) {
+      for (const mirrorPattern of control.mirrors) {
+        const mirrored = replaceConfigPattern(lua, mirrorPattern, formatted);
+        if (mirrored.ok) lua = mirrored.lua;
+      }
+    }
+
+    lua = syncConfigFieldMirrors(lua);
+    configEditor.value = lua;
+    refreshConfigExport();
     if (saveStatus) saveStatus.textContent = 'Unsaved changes';
-    
-    // Debug: Log what was updated
-    console.log(`[CONFIG] Updated ${control.label} to:`, formatted);
   }
 
   function updateRangeFill(input) {
@@ -1064,12 +1152,32 @@ local function applyConfig(configText)
         return false
     end
 
+    local function syncRuntimeFieldMirrors()
+        local sa = getgenv().Sacrifice and getgenv().Sacrifice["Silent Aim"]
+        if not sa then return end
+        local modern = sa.Settings and sa.Settings.Fov
+        if not modern then return end
+        if not sa.FOV then
+            sa.FOV = {
+                Visible = modern.Visible == true,
+                Radius = modern.Radius or 350,
+                Color = modern.Color or Color3.fromRGB(0, 17, 255),
+                Mode = "Circle",
+            }
+        else
+            sa.FOV.Visible = modern.Visible == true
+            if modern.Radius ~= nil then sa.FOV.Radius = modern.Radius end
+            if modern.Color then sa.FOV.Color = modern.Color end
+        end
+    end
+
     if getgenv().Sacrifice then
         deepMerge(getgenv().Sacrifice, cloudConfig)
         getgenv().sacrifice = getgenv().Sacrifice
         if getgenv().sacrifice and getgenv().sacrifice["Trigger Bot"] then
             getgenv().sacrifice.Triggerbot = getgenv().sacrifice["Trigger Bot"]
         end
+        syncRuntimeFieldMirrors()
         if getgenv().Sacrifice_RefreshLocals then
             pcall(getgenv().Sacrifice_RefreshLocals)
         end
@@ -1162,7 +1270,8 @@ print("Sacrifice ready - waiting for config...")`;
       const response = await fetch(apiUrl('/api/config'), { credentials: 'include' });
       const result = await parseApiResponse(response);
       if (response.ok && configEditor) {
-        configEditor.value = result.config;
+        configEditor.value = syncConfigFieldMirrors(result.config);
+        refreshConfigExport();
         renderConfigControls(activeConfigSection);
         if (saveStatus) saveStatus.textContent = 'Loaded from cloud';
         showToast('Configuration loaded', 'success');
@@ -1216,10 +1325,17 @@ print("Sacrifice ready - waiting for config...")`;
     for (const [control] of controlRegistry.entries()) {
       if (!control?.pattern) continue;
       try {
-        const pattern = new RegExp(control.pattern, 'm');
-        if (!pattern.test(currentConfig)) continue;
         const formatted = formatControlValue(control, getControlValue(control));
-        currentConfig = currentConfig.replace(pattern, `$1${formatted}$3`);
+        const primary = replaceConfigPattern(currentConfig, control.pattern, formatted);
+        if (!primary.ok) continue;
+        let lua = primary.lua;
+        if (Array.isArray(control.mirrors)) {
+          for (const mirrorPattern of control.mirrors) {
+            const mirrored = replaceConfigPattern(lua, mirrorPattern, formatted);
+            if (mirrored.ok) lua = mirrored.lua;
+          }
+        }
+        currentConfig = lua;
         updatedCount++;
       } catch (err) {
         console.warn(`Failed to update control ${control.label}:`, err);
@@ -1227,7 +1343,7 @@ print("Sacrifice ready - waiting for config...")`;
     }
 
     console.log(`[CONFIG] Synced ${updatedCount} visible control(s) from UI`);
-    return currentConfig;
+    return syncConfigFieldMirrors(currentConfig);
   }
 
   async function activateConfig() {
@@ -1590,7 +1706,10 @@ print("Sacrifice ready - waiting for config...")`;
         showToast('Invalid Sacrifice config format', 'error');
         return;
       }
-      if (configEditor) configEditor.value = text;
+      if (configEditor) {
+        configEditor.value = syncConfigFieldMirrors(text);
+        refreshConfigExport();
+      }
       renderConfigControls(activeConfigSection);
       if (saveStatus) saveStatus.textContent = 'Unsaved changes';
       showToast('Config imported — save to cloud when ready', 'success');
