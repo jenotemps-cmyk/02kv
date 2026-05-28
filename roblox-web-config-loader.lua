@@ -4,7 +4,24 @@ local SERVER_URL = "wss://getsacrifice.bonto.run?token=PASTE_YOUR_TOKEN_HERE"
 local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
 local HttpService = game:GetService("HttpService")
 
+local function cloneTable(src)
+    local out = {}
+    for k, v in pairs(src) do
+        out[k] = (typeof(v) == "table") and cloneTable(v) or v
+    end
+    return out
+end
+
+local function syncIntoLiveTable(liveTable, newTable)
+    table.clear(liveTable)
+    for k, v in pairs(newTable) do
+        liveTable[k] = (typeof(v) == "table") and cloneTable(v) or v
+    end
+end
+
 local function applyConfig(configText)
+    local liveConfig = getgenv().sacrifice or getgenv().Sacrifice
+
     local configFunc, compileErr = loadstring(configText)
     if not configFunc then
         return false, "Failed to compile config: " .. tostring(compileErr)
@@ -20,9 +37,16 @@ local function applyConfig(configText)
         return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
     end
 
-    -- Cloud config fully replaces script defaults (no merge)
-    getgenv().sacrifice = newConfig
-    getgenv().Sacrifice = newConfig
+    if typeof(liveConfig) == "table" and liveConfig ~= newConfig then
+        -- Keep same table reference so source locals still see updates
+        syncIntoLiveTable(liveConfig, newConfig)
+        getgenv().sacrifice = liveConfig
+        getgenv().Sacrifice = liveConfig
+    else
+        getgenv().sacrifice = newConfig
+        getgenv().Sacrifice = newConfig
+    end
+
     return true
 end
 
