@@ -133,6 +133,23 @@ function isLegacySacrificeConfig(config) {
   );
 }
 
+/**
+ * Extract just the table content from a full config string
+ * Input: "getgenv().Sacrifice = { ... }"
+ * Output: "{ ... }" which can be passed to Lua's applyCloudConfig
+ */
+function extractConfigTable(fullConfig) {
+  if (!fullConfig || typeof fullConfig !== 'string') return null;
+
+  // Match: getgenv().Sacrifice = { ... }
+  // Capture just the table part
+  const match = fullConfig.match(/getgenv\(\)\.[Ss]acrifice\s*=\s*(\{[\s\S]*\})\s*$/);
+  if (match) {
+    return match[1]; // Return just the { ... } part
+  }
+  return null;
+}
+
 function migrateAllUserConfigsToDefault() {
   const db = readLocalDB();
   let migrated = 0;
@@ -207,12 +224,22 @@ wss.on('connection', (ws, request, username) => {
   if (localUser && ws.readyState === WebSocket.OPEN) {
     try {
       const configToSend = localUser.config || DEFAULT_LUA_CONFIG;
-      ws.send(JSON.stringify({
-        type: 'init',
+      const tableOnly = extractConfigTable(configToSend);
+      if (!tableOnly) {
+        console.error(`[WS] Failed to extract config table for ${username}`);
+        ws.send(JSON.stringify({
+          type: 'init',
         config: localUser.config
-        config: configToSend
-      }));
-      console.log(`[WS] Sent initial config to ${username}`);
+          config: configToSend,
+          error: 'Failed to parse config'
+        }));
+      } else {
+        ws.send(JSON.stringify({
+          type: 'init',
+          config: tableOnly
+        }));
+        console.log(`[WS] Sent initial config to ${username}`);
+      }
     } catch (err) {
       console.error(`[WS] Failed to send initial config: ${err.message}`);
     }
@@ -313,8 +340,16 @@ function broadcastConfigUpdate(username, config) {
     return 0;
   }
 
+  // Extract just the table part for the Lua loader
+  const tableOnly = extractConfigTable(config);
+  if (!tableOnly) {
+    console.error(`[Activation] Failed to extract config table for ${username}`);
+    return 0;
+  }
+
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
+    const payload = JSON.stringify({ type: 'update', config: tableOnly });
     userConns.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
