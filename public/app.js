@@ -1015,6 +1015,7 @@ local function applyConfig(configText)
             warn("Cloud config apply failed: " .. tostring(err))
             return false
         end
+        getgenv().Sacrifice_CloudConfigReceived = true
         return true
     end
 
@@ -1029,6 +1030,7 @@ local function applyConfig(configText)
     
     getgenv().sacrifice = newConfig
     getgenv().Sacrifice = newConfig
+    getgenv().Sacrifice_CloudConfigReceived = true
     return true
 end
 
