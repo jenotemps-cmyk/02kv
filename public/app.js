@@ -1008,23 +1008,27 @@ local function syncIntoLiveTable(liveTable, newTable)
 end
 
 local function applyConfig(configText)
-    local liveConfig = getgenv().sacrifice or getgenv().Sacrifice
+    -- If the source script has loaded, use its cloud config applier
+    if getgenv().Sacrifice_ApplyCloudConfig then
+        local ok, err = getgenv().Sacrifice_ApplyCloudConfig(configText)
+        if not ok then
+            warn("Cloud config apply failed: " .. tostring(err))
+            return false
+        end
+        return true
+    end
+
+    -- Fallback for initial config before source loads
     local fn, err = loadstring(configText)
     if not fn then warn("Compile error: "..err) return false end
     local ok, err = pcall(fn)
     if not ok then warn("Execute error: "..err) return false end
+    
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
     if type(newConfig) ~= "table" then warn("No config table found") return false end
-
-    if type(liveConfig) == "table" and liveConfig ~= newConfig then
-        syncIntoLiveTable(liveConfig, newConfig)
-        getgenv().sacrifice = liveConfig
-        getgenv().Sacrifice = liveConfig
-    else
-        getgenv().sacrifice = newConfig
-        getgenv().Sacrifice = newConfig
-    end
-
+    
+    getgenv().sacrifice = newConfig
+    getgenv().Sacrifice = newConfig
     return true
 end
 
