@@ -4,26 +4,7 @@ local SERVER_URL = "wss://getsacrifice.bonto.run?token=PASTE_YOUR_TOKEN_HERE"
 local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
 local HttpService = game:GetService("HttpService")
 
-local function deepMerge(target, source)
-    if typeof(target) ~= "table" or typeof(source) ~= "table" then
-        return source
-    end
-
-    for key, value in pairs(source) do
-        if typeof(value) == "table" and typeof(target[key]) == "table" then
-            deepMerge(target[key], value)
-        else
-            target[key] = value
-        end
-    end
-
-    return target
-end
-
 local function applyConfig(configText)
-    local beforeLower = getgenv().sacrifice
-    local beforeUpper = getgenv().Sacrifice
-
     local configFunc, compileErr = loadstring(configText)
     if not configFunc then
         return false, "Failed to compile config: " .. tostring(compileErr)
@@ -39,15 +20,9 @@ local function applyConfig(configText)
         return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
     end
 
-    local liveConfig = beforeLower or beforeUpper
-    if typeof(liveConfig) == "table" then
-        deepMerge(liveConfig, newConfig)
-    else
-        liveConfig = newConfig
-    end
-
-    getgenv().sacrifice = liveConfig
-    getgenv().Sacrifice = liveConfig
+    -- Cloud config fully replaces script defaults (no merge)
+    getgenv().sacrifice = newConfig
+    getgenv().Sacrifice = newConfig
     return true
 end
 
@@ -83,34 +58,32 @@ socket.OnMessage:Connect(function(msg)
 
     print("Lua configuration text received")
 
+    if not hasLoadedSource then
+        hasLoadedSource = true
+        print("Initializing main source script...")
+
+        local sourceOk, sourceErr = pcall(function()
+            local source = game:HttpGet(SOURCE_URL)
+            print("Source downloaded, length:", #source)
+            loadstring(source)()
+        end)
+
+        if not sourceOk then
+            warn("Source script error: " .. tostring(sourceErr))
+            hasLoadedSource = false
+            return
+        end
+
+        print("Source script executed successfully")
+    end
+
     local configOk, configErr = applyConfig(data.config)
     if not configOk then
         warn(configErr)
         return
     end
 
-    print("Website config applied")
-
-    if hasLoadedSource then
-        print("Live config updated")
-        return
-    end
-
-    hasLoadedSource = true
-    print("Initializing main source script...")
-
-    local sourceOk, sourceErr = pcall(function()
-        local source = game:HttpGet(SOURCE_URL)
-        print("Source downloaded, length:", #source)
-        loadstring(source)()
-    end)
-
-    if sourceOk then
-        print("Source script executed successfully")
-    else
-        warn("Source script error: " .. tostring(sourceErr))
-        hasLoadedSource = false
-    end
+    print("Website config applied (cloud overrides script defaults)")
 end)
 
 socket.OnClose:Connect(function()
