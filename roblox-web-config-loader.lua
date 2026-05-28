@@ -47,13 +47,33 @@ local function applyConfig(configText)
 
     print("[DEBUG] Parsed config successfully, has keys:", cloudConfig and "yes" or "no")
 
+    local function syncRuntimeFieldMirrors()
+        local sa = getgenv().Sacrifice and getgenv().Sacrifice["Silent Aim"]
+        if not sa then return end
+        local modern = sa.Settings and sa.Settings.Fov
+        if not modern then return end
+        if not sa.FOV then
+            sa.FOV = {
+                Visible = modern.Visible == true,
+                Radius = modern.Radius or 350,
+                Color = modern.Color or Color3.fromRGB(0, 17, 255),
+                Mode = "Circle",
+            }
+        else
+            sa.FOV.Visible = modern.Visible == true
+            if modern.Radius ~= nil then sa.FOV.Radius = modern.Radius end
+            if modern.Color then sa.FOV.Color = modern.Color end
+        end
+    end
+
     -- Merge cloud config into existing Sacrifice table
     if getgenv().Sacrifice then
         print("[DEBUG] Merging into existing Sacrifice table")
         deepMerge(getgenv().Sacrifice, cloudConfig)
         getgenv().sacrifice = getgenv().Sacrifice
         getgenv().sacrifice.Triggerbot = getgenv().sacrifice['Trigger Bot']
-        
+        syncRuntimeFieldMirrors()
+
         -- Trigger refresh if the source script has this function
         if getgenv().Sacrifice_RefreshLocals then
             getgenv().Sacrifice_RefreshLocals()
