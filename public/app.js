@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchUserDataFromSupabase(username) {
     try {
       const response = await fetch(apiUrl(`/api/user/${username}`), {
-        credentials: 'include',
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -143,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
   async function fetchLicenseKey(username) {
     try {
       const response = await fetch(apiUrl(`/api/user/${username}/license`), {
-        credentials: 'include',
         method: 'GET',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' }
@@ -1145,8 +1143,7 @@ print("Sacrifice ready - waiting for config...")`;
   // ============================================================
   async function loadConfig() {
     try {
-      const response = await fetch(apiUrl('/api/config'), {
-        credentials: 'include', credentials: 'include' });
+      const response = await fetch(apiUrl('/api/config'), { credentials: 'include' });
       const result = await parseApiResponse(response);
       if (response.ok && configEditor) {
         configEditor.value = result.config;
@@ -1167,7 +1164,6 @@ print("Sacrifice ready - waiting for config...")`;
 
     try {
       const response = await fetch(apiUrl('/api/config/save'), {
-        credentials: 'include',
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -1287,7 +1283,6 @@ print("Sacrifice ready - waiting for config...")`;
 
     try {
       const response = await fetch(apiUrl('/api/config/push'), {
-        credentials: 'include',
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -1313,8 +1308,7 @@ print("Sacrifice ready - waiting for config...")`;
 
   async function updateConnectionStatus() {
     try {
-      const response = await fetch(apiUrl('/api/connections'), {
-        credentials: 'include', credentials: 'include' });
+      const response = await fetch(apiUrl('/api/connections'), { credentials: 'include' });
       const result = await response.json();
       if (response.ok && statusDot && statusText) {
         const count = result.count;
@@ -1347,8 +1341,7 @@ print("Sacrifice ready - waiting for config...")`;
 
   async function checkSession() {
     try {
-      const response = await fetch(apiUrl('/api/auth/session'), {
-        credentials: 'include', credentials: 'include' });
+      const response = await fetch(apiUrl('/api/auth/session'), { credentials: 'include' });
       const result = await response.json();
       if (response.ok && result.authenticated) {
         activeSessionToken = result.token;
@@ -1394,7 +1387,7 @@ print("Sacrifice ready - waiting for config...")`;
       }
       try {
         const response = await fetch(apiUrl('/api/auth/login'), {
-        credentials: 'include',
+          credentials: 'include',
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -1427,7 +1420,7 @@ print("Sacrifice ready - waiting for config...")`;
       }
       try {
         const response = await fetch(apiUrl('/api/auth/register'), {
-        credentials: 'include',
+          credentials: 'include',
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -1474,8 +1467,7 @@ print("Sacrifice ready - waiting for config...")`;
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {
       try {
-        await fetch(apiUrl('/api/auth/logout'), {
-        credentials: 'include', method: 'POST', credentials: 'include' });
+        await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
         showToast('Logged out', 'success');
         activeSessionToken = null;
         activeLicenseKey = null;
