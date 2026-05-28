@@ -122,6 +122,38 @@ function writeLocalDB(data) {
   }
 }
 
+/** Old saved configs lack v2 fields or use deprecated keys — replace with default-config.lua */
+function isLegacySacrificeConfig(config) {
+  if (!config || typeof config !== 'string') return true;
+  return (
+    !config.includes('DistanceScalingHitChance') ||
+    !config.includes('HorizontalPrediction') ||
+    config.includes('enabled = true') ||
+    config.includes('getgenv().sacrifice')
+  );
+}
+
+function migrateAllUserConfigsToDefault() {
+  const db = readLocalDB();
+  let migrated = 0;
+
+  for (const user of db) {
+    if (!isLegacySacrificeConfig(user.config)) continue;
+
+    user.config = DEFAULT_LUA_CONFIG;
+    if (user.lastActivatedConfig) {
+      user.lastActivatedConfig = DEFAULT_LUA_CONFIG;
+    }
+    migrated += 1;
+    console.log(`[Migration] Updated config for user: ${user.username}`);
+  }
+
+  if (migrated > 0) {
+    writeLocalDB(db);
+    console.log(`[Migration] ${migrated} account(s) now use default-config.lua`);
+  }
+}
+
 // Auth middleware
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
@@ -634,6 +666,8 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong on the server!' });
 });
+
+migrateAllUserConfigsToDefault();
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Sacrifice config hub running on http://localhost:${PORT}`);
