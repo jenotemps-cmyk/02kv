@@ -983,7 +983,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
 print("Sacrifice loader starting...")
-print("[Sacrifice] Loader started")
 
 local SERVER_URL = "${serverUrl}"
 local SOURCE_URL = "${sourceUrl}"
@@ -1000,20 +999,12 @@ local function cloneTable(src)
     end
     return out
 end
--- Connect to WebSocket
-local socket
-local connectOk, connectErr = pcall(function()
-    socket = WebSocket.connect(SERVER_URL)
-end)
 
 local function syncIntoLiveTable(liveTable, newTable)
     table.clear(liveTable)
     for k, v in pairs(newTable) do
         liveTable[k] = (type(v) == "table") and cloneTable(v) or v
-if not connectOk or not socket then
-    warn("[Sacrifice] WebSocket connection failed: " .. tostring(connectErr))
-    return
-end
+    end
 end
 
 local function applyConfig(configText)
@@ -1024,7 +1015,6 @@ local function applyConfig(configText)
     if not ok then warn("Execute error: "..err) return false end
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
     if type(newConfig) ~= "table" then warn("No config table found") return false end
-print("[Sacrifice] Connected to WebSocket")
 
     if type(liveConfig) == "table" and liveConfig ~= newConfig then
         syncIntoLiveTable(liveConfig, newConfig)
@@ -1033,25 +1023,10 @@ print("[Sacrifice] Connected to WebSocket")
     else
         getgenv().sacrifice = newConfig
         getgenv().Sacrifice = newConfig
-local hasLoadedSource = false
-local sourceLoaded = false
-
-socket.OnMessage:Connect(function(msg)
-    print("[Sacrifice] Received message")
-
-    if not msg or #msg == 0 then
-        return
     end
 
     return true
-    local decodedOk, data = pcall(function()
-        return HttpService:JSONDecode(msg)
-    end)
-
-    if not decodedOk then
-        warn("[Sacrifice] Failed to decode message")
-        return
-    end
+end
 
 local function connectWebSocket(url, retryCount)
     retryCount = retryCount or 0
@@ -1066,34 +1041,20 @@ local function connectWebSocket(url, retryCount)
     else
         warn("WebSocket failed after "..MAX_RETRIES.." attempts")
         return nil
-    if not data or (data.type ~= "init" and data.type ~= "update") then
-        return
     end
 end
 
 local socket = connectWebSocket(SERVER_URL)
 if not socket then warn("Could not establish WebSocket connection") return end
-    print("[Sacrifice] Received config message, type: " .. tostring(data.type))
 
 local loaded = false
-    -- Load source script on first config message
-    if not hasLoadedSource then
-        hasLoadedSource = true
-        print("[Sacrifice] Loading main source script...")
 
 task.spawn(function()
     while socket and socket.OnMessage do
         wait(25)
         pcall(function() socket:Send("ping") end)
-        local sourceOk, sourceErr = pcall(function()
-            local source = game:HttpGet(SOURCE_URL)
-            if not source or #source == 0 then
-                error("Source is empty")
-            end
-            print("[Sacrifice] Source downloaded, size: " .. #source .. " bytes")
-            loadstring(source)()
-            sourceLoaded = true
-        end)
+    end
+end)
 
 socket.OnMessage:Connect(function(msg)
     if msg == "ping" then return end
@@ -1110,24 +1071,12 @@ socket.OnMessage:Connect(function(msg)
                 print("Source loaded")
             else
                 warn("Source error: "..tostring(err))
-        if not sourceOk then
-            warn("[Sacrifice] Source script error: " .. tostring(sourceErr))
-            hasLoadedSource = false
-            return
-        end
+                return
+            end
         else
             warn("Failed to download source")
             return
-
-        print("[Sacrifice] Source script loaded successfully")
-        -- Wait a frame for script to initialize
-        task.wait(0.1)
-    end
-
-    -- Wait for source to fully load
-    if not sourceLoaded then
-        print("[Sacrifice] Waiting for source to initialize...")
-        task.wait(0.2)
+        end
     end
     if applyConfig(data.config) then
         print("Cloud config applied")
@@ -1136,35 +1085,16 @@ socket.OnMessage:Connect(function(msg)
                 pcall(function()
                     if applyConfig(data.config) then
                         print("Cloud config reapplied")
-
-    -- Use the script's built-in cloud config applier
-    if not data.config or #data.config == 0 then
-        warn("[Sacrifice] Config is empty")
-        return
-    end
+                    end
                 end)
             end)
-
-    if getgenv().Sacrifice_ApplyCloudConfig then
-        print("[Sacrifice] Applying config using script's built-in function")
-        local ok, err = getgenv().Sacrifice_ApplyCloudConfig(data.config)
-        if not ok then
-            warn("[Sacrifice] Config apply failed: " .. tostring(err))
-            return
         end
-        print("[Sacrifice] Config applied successfully")
-    else
-        warn("[Sacrifice] Script's Sacrifice_ApplyCloudConfig function not found!")
     end
 end)
 
 socket.OnClose:Connect(function() warn("WebSocket closed") end)
-socket.OnClose:Connect(function()
-    warn("[Sacrifice] WebSocket connection closed")
-end)
 
 print("Sacrifice ready - waiting for config...")`;
-print("[Sacrifice] Loader ready, waiting for config messages...")`;
   }
 
   // ============================================================
