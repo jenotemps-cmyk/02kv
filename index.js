@@ -334,10 +334,8 @@ app.get('/api/health', (req, res) => {
 });
 
 function activateConfigHandler(req, res) {
-  console.log(`[Activation] ${req.user.username}`);
-  console.log(`[Activation] req.body.config type:`, typeof req.body.config);
-  console.log(`[Activation] req.body.config length:`, req.body.config ? req.body.config.length : 'undefined');
-  console.log(`[Activation] req.body.config preview:`, req.body.config ? req.body.config.substring(0, 100) : 'undefined');
+  console.log(`[Activation] User: ${req.user.username}`);
+  console.log(`[Activation] Config from body:`, req.body.config ? 'YES' : 'NO');
 
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
@@ -348,7 +346,6 @@ function activateConfigHandler(req, res) {
   }
 
   const configToActivate = typeof req.body.config === 'string' ? req.body.config : user.config;
-  console.log(`[Activation] Using ${req.body.config ? 'req.body.config' : 'user.config from DB'}`);
   const match = configToActivate.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
   if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
