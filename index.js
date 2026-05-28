@@ -200,20 +200,9 @@ wss.on('connection', (ws, request, username) => {
   }
   clientConnections.get(connectionKey).add(ws);
 
-  const db = readLocalDB();
-  const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
-
-  if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify({
-        type: 'init',
-        config: localUser.config
-      }));
-      console.log(`[WS] Sent initial config to ${username}`);
-    } catch (err) {
-      console.error(`[WS] Failed to send initial config: ${err.message}`);
-    }
-  }
+  // Don't send config automatically on connection
+  // Config will be sent when user clicks "Activate Config"
+  console.log(`[WS] Client connected for user: ${username}`);
 
   ws.on('close', (code, reason) => {
     console.log(`[WS] Client disconnected for user: ${username}, code: ${code}`);
@@ -334,8 +323,7 @@ app.get('/api/health', (req, res) => {
 });
 
 function activateConfigHandler(req, res) {
-  console.log(`[Activation] User: ${req.user.username}`);
-  console.log(`[Activation] Config from body:`, req.body.config ? 'YES' : 'NO');
+  console.log(`[Activation] ${req.user.username}`);
 
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
@@ -670,3 +658,7 @@ app.use((err, req, res, next) => {
 
 migrateAllUserConfigsToDefault();
 
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Sacrifice config hub running on http://localhost:${PORT}`);
+  console.log(`WebSocket server ready`);
+});
