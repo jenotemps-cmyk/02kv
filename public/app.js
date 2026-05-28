@@ -1080,6 +1080,15 @@ socket.OnMessage:Connect(function(msg)
     end
     if applyConfig(data.config) then
         print("Cloud config applied")
+        if loaded then
+            task.delay(0.35, function()
+                pcall(function()
+                    if applyConfig(data.config) then
+                        print("Cloud config reapplied")
+                    end
+                end)
+            end)
+        end
     end
 end)
 
