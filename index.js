@@ -204,10 +204,13 @@ wss.on('connection', (ws, request, username) => {
   const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
 
   if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
+  if (localUser && ws.readyState === WebSocket.OPEN) {
     try {
+      const configToSend = localUser.config || DEFAULT_LUA_CONFIG;
       ws.send(JSON.stringify({
         type: 'init',
         config: localUser.config
+        config: configToSend
       }));
       console.log(`[WS] Sent initial config to ${username}`);
     } catch (err) {
@@ -305,6 +308,11 @@ function broadcastConfigUpdate(username, config) {
   const userConns = clientConnections.get(connectionKey);
   let count = 0;
 
+  if (!config || typeof config !== 'string') {
+    console.error(`[Activation] Invalid config type for ${username}`);
+    return 0;
+  }
+
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
     userConns.forEach((ws) => {
@@ -345,11 +353,19 @@ function activateConfigHandler(req, res) {
   }
 
   const configToActivate = typeof req.body.config === 'string' ? req.body.config : user.config;
+
+  if (!configToActivate || typeof configToActivate !== 'string') {
+    return res.status(400).json({ error: 'No configuration provided.' });
+  }
+
+  // Validate config format: must be getgenv().Sacrifice = { ... }
   const match = configToActivate.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
   if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
+    return res.status(400).json({ error: 'Invalid config format. Must be: getgenv().Sacrifice = { ... }' });
   }
 
+  console.log(`[Activation] Broadcasting config for ${user.username}...`);
   const activeConnectionsCount = broadcastConfigUpdate(user.username, configToActivate);
 
   res.json({
@@ -364,8 +380,10 @@ function activateConfigHandler(req, res) {
       user.config = configToActivate;
       user.lastActivatedConfig = configToActivate;
       writeLocalDB(db);
+      console.log(`[Activation] Config persisted for ${user.username}`);
     } catch (err) {
       console.error(`Failed to persist config:`, err);
+      console.error(`[Activation] Failed to persist config for ${user.username}:`, err);
     }
   });
 }
