@@ -88,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const CONFIGS_STORAGE_KEY = 'sacrifice_saved_configs';
   const EXECUTIONS_KEY = 'sacrifice_executions';
 
+  // --- UI Control Registry ---
+  const controlRegistry = new Map(); // Maps control objects to their UI elements
+
   function getSavedConfigs() {
     try {
       return JSON.parse(localStorage.getItem(CONFIGS_STORAGE_KEY) || '[]');
@@ -652,6 +655,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function getControlValue(control) {
+    // First try to get value from UI element if it exists
+    const uiElement = controlRegistry.get(control);
+    if (uiElement) {
+      if (control.type === 'toggle') return uiElement.checked;
+      if (control.type === 'range') return Number(uiElement.value);
+      if (control.type === 'select') return uiElement.value;
+      if (control.type === 'text') return uiElement.value;
+    }
+    
+    // Fallback to reading from config text
     if (!configEditor || !configEditor.value) return control.fallback;
     const match = configEditor.value.match(new RegExp(control.pattern, 'm'));
     if (!match) return control.fallback;
@@ -683,6 +696,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     configEditor.value = configEditor.value.replace(pattern, `$1${formatted}$3`);
     if (saveStatus) saveStatus.textContent = 'Unsaved changes';
+    
+    // Debug: Log what was updated
+    console.log(`[CONFIG] Updated ${control.label} to:`, formatted);
   }
 
   function updateRangeFill(input) {
@@ -698,6 +714,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   function renderConfigControls(sectionKey = activeConfigSection) {
     if (!configPanels || !configEditor) return;
+
+    // Clear registry for all controls when rebuilding sections
+    controlRegistry.clear();
 
     activeConfigSection = sectionKey;
     const section = sectionCopy[sectionKey] || sectionCopy.silent;
@@ -830,6 +849,10 @@ document.addEventListener('DOMContentLoaded', () => {
           input.type = 'checkbox';
           input.checked = Boolean(value);
           input.addEventListener('change', () => updateConfigValue(control, input.checked));
+          
+          // Register the control for value reading
+          controlRegistry.set(control, input);
+          
           const switchEl = document.createElement('span');
           switchEl.className = 'switch';
           switchEl.appendChild(input);
@@ -845,6 +868,10 @@ document.addEventListener('DOMContentLoaded', () => {
           input.step = control.step;
           input.value = Number.isFinite(value) ? value : control.fallback;
           updateRangeFill(input);
+          
+          // Register the control for value reading
+          controlRegistry.set(control, input);
+          
           const output = document.createElement('input');
           output.type = 'number';
           output.className = 'range-value-input';
@@ -885,12 +912,20 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           select.value = value || control.fallback;
           select.addEventListener('change', () => updateConfigValue(control, select.value));
+          
+          // Register the control for value reading
+          controlRegistry.set(control, select);
+          
           row.appendChild(select);
         } else {
           const input = document.createElement('input');
           input.type = 'text';
           input.value = value ?? control.fallback;
           input.addEventListener('change', () => updateConfigValue(control, input.value));
+          
+          // Register the control for value reading
+          controlRegistry.set(control, input);
+          
           row.appendChild(input);
         }
 
@@ -1146,10 +1181,101 @@ print("Sacrifice ready - waiting for config...")`;
     }
   }
 
+  // Generate current config from UI controls
+  function generateCurrentConfig() {
+    if (!configEditor || !configEditor.value) {
+      console.error('[CONFIG] No config editor or config text available');
+      return null;
+    }
+    
+    console.log('[CONFIG] Generating config from UI state...');
+    console.log('[CONFIG] Control registry size:', controlRegistry.size);
+    
+    // Start with the base config
+    let currentConfig = configEditor.value;
+    
+    // Update all control values in the config text
+    const allControls = [
+      // Silent Aim
+      ...silentCoreControls,
+      ...silentFovControls, 
+      ...silentLegitControls,
+      ...silentLegacyControls,
+      ...silentPredictionControls,
+      ...silentTracerControls,
+      ...silentClosestControls,
+      // Trigger Bot
+      ...triggerCoreControls,
+      ...triggerHitControls,
+      ...triggerPredictionControls,
+      ...triggerWeaponControls,
+      // Camera
+      ...cameraCoreControls,
+      ...cameraTargetControls,
+      ...cameraPredictionControls,
+      ...cameraShakeControls,
+      ...cameraRoboticControls,
+      ...cameraAutoPredictionControls,
+      ...cameraLegacyControls,
+      ...cameraTracerControls,
+      // Visuals
+      ...visualsEspControls,
+      ...visualsWatermarkControls,
+      ...visualsWorldControls,
+      // Movement
+      ...movementSpeedControls,
+      ...movementJumpControls,
+      ...movementSpidermanControls,
+      ...movementNoclipControls,
+      // Weapons
+      ...weaponsDelayControls,
+      ...weaponsRapidFireControls,
+      ...weaponsSkinControls,
+      // Misc
+      ...miscRangeControls,
+      ...miscUtilityControls,
+      ...miscAvatarControls
+    ].filter(control => control && control.pattern); // Filter out invalid controls
+    
+    // Apply current UI values to config text
+    let updatedCount = 0;
+    allControls.forEach(control => {
+      try {
+        const currentValue = getControlValue(control);
+        const pattern = new RegExp(control.pattern, 'm');
+        const formatted = formatControlValue(control, currentValue);
+        
+        if (pattern.test(currentConfig)) {
+          currentConfig = currentConfig.replace(pattern, `$1${formatted}$3`);
+          updatedCount++;
+        }
+      } catch (err) {
+        console.warn(`Failed to update control ${control.label}:`, err);
+      }
+    });
+    
+    console.log(`[CONFIG] Updated ${updatedCount} controls out of ${allControls.length}`);
+    return currentConfig;
+  }
+
   async function activateConfig() {
-    if (!configEditor) return;
-    const configData = configEditor.value;
+    if (!configEditor) {
+      console.error('[CONFIG] configEditor not found!');
+      return;
+    }
+    
+    // Generate config from current UI state
+    const configData = generateCurrentConfig();
+    
+    if (!configData || configData.trim() === '') {
+      console.error('[CONFIG] Generated config is empty!');
+      showToast('Config generation failed', 'error');
+      return;
+    }
+    
     if (!btnActivate) return;
+
+    console.log('[CONFIG] Activating generated config, length:', configData.length);
 
     const originalText = btnActivate.textContent;
     btnActivate.disabled = true;
@@ -1172,6 +1298,7 @@ print("Sacrifice ready - waiting for config...")`;
       }
       updateConnectionStatus();
     } catch (err) {
+      console.error('[CONFIG] Activation error:', err);
       showToast(err.message || 'Activation failed', 'error');
     } finally {
       btnActivate.disabled = false;
@@ -1319,6 +1446,22 @@ print("Sacrifice ready - waiting for config...")`;
   if (btnSave) btnSave.addEventListener('click', saveConfig);
   if (btnActivate) btnActivate.addEventListener('click', activateConfig);
 
+  // TEMPORARY DEBUG BUTTON
+  if (btnActivate && btnActivate.parentNode) {
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = 'DEBUG CONFIG';
+    debugBtn.className = 'btn btn-secondary';
+    debugBtn.style.marginLeft = '10px';
+    debugBtn.onclick = function() {
+      console.log('[DEBUG] Config Editor Check:');
+      console.log('- Element exists:', !!configEditor);
+      console.log('- Element visible:', configEditor ? configEditor.style.display !== 'none' : 'N/A');
+      console.log('- Has content:', configEditor ? configEditor.value.length : 'N/A');
+      console.log('- Content preview:', configEditor ? configEditor.value.substring(0, 200) : 'N/A');
+    };
+    btnActivate.parentNode.insertBefore(debugBtn, btnActivate.nextSibling);
+  }
+
   if (btnLogout) {
     btnLogout.addEventListener('click', async () => {
       try {
@@ -1397,146 +1540,3 @@ print("Sacrifice ready - waiting for config...")`;
     });
   }
 
-  if (btnCopyKey) {
-    btnCopyKey.addEventListener('click', () => {
-      if (activeLicenseKey) {
-        navigator.clipboard.writeText(activeLicenseKey)
-          .then(() => showToast('License key copied!', 'success'))
-          .catch(() => showToast('Failed to copy', 'error'));
-      }
-    });
-  }
-
-  if (btnSaveConfigNamed) {
-    btnSaveConfigNamed.addEventListener('click', () => {
-      const name = configSaveName?.value.trim();
-      if (!name) {
-        showToast('Enter a config name', 'warning');
-        return;
-      }
-      if (!configEditor?.value) {
-        showToast('No config to save', 'error');
-        return;
-      }
-      const configs = getSavedConfigs();
-      configs.push({
-        name: name,
-        data: configEditor.value,
-        date: new Date().toLocaleString()
-      });
-      setSavedConfigs(configs);
-      if (configSaveName) configSaveName.value = '';
-      renderSavedConfigs();
-      showToast(`Config "${name}" saved!`, 'success');
-    });
-  }
-
-  if (btnImportConfig) {
-    btnImportConfig.addEventListener('click', () => {
-      const text = configImportText?.value.trim();
-      if (!text) {
-        showToast('Paste a config to import', 'warning');
-        return;
-      }
-      const match = text.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
-      if (!match) {
-        showToast('Invalid Sacrifice config format', 'error');
-        return;
-      }
-      if (configEditor) configEditor.value = text;
-      showToast('Config imported!', 'success');
-      if (configImportText) configImportText.value = '';
-      renderConfigControls(activeConfigSection);
-    });
-  }
-
-  if (btnCopyExport) {
-    btnCopyExport.addEventListener('click', () => {
-      const text = configExportText?.value;
-      if (!text) {
-        showToast('No config to export', 'warning');
-        return;
-      }
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('Config copied!', 'success'))
-        .catch(() => showToast('Failed to copy', 'error'));
-    });
-  }
-
-  if (btnSettings && settingsModal) {
-    btnSettings.addEventListener('click', () => {
-      if (settingLogoUrl) {
-        const savedLogo = localStorage.getItem('sacrifice_logo_url') || '';
-        settingLogoUrl.value = savedLogo;
-      }
-      settingsModal.classList.remove('hidden');
-    });
-  }
-
-  if (btnCloseSettings && settingsModal) {
-    btnCloseSettings.addEventListener('click', () => {
-      settingsModal.classList.add('hidden');
-    });
-  }
-
-  if (settingsModal) {
-    settingsModal.addEventListener('click', (e) => {
-      if (e.target === settingsModal) settingsModal.classList.add('hidden');
-    });
-  }
-
-  if (btnSaveSettings) {
-    btnSaveSettings.addEventListener('click', () => {
-      const url = settingLogoUrl?.value.trim() || '';
-      if (url) {
-        localStorage.setItem('sacrifice_logo_url', url);
-        showToast('Logo updated!', 'success');
-      } else {
-        localStorage.removeItem('sacrifice_logo_url');
-        showToast('Logo reset', 'info');
-      }
-      applyBrandingLogo();
-      if (settingsModal) settingsModal.classList.add('hidden');
-    });
-  }
-
-  if (configNav) {
-    configNav.addEventListener('click', (event) => {
-      const link = event.target.closest('[data-section]');
-      if (!link) return;
-      if (link.dataset.section === activeConfigSection) return;
-      document.querySelectorAll('.side-link').forEach(item => item.classList.remove('active'));
-      link.classList.add('active');
-      if (sectionTransitionTimer) clearTimeout(sectionTransitionTimer);
-      if (configPanels && !configPanels.classList.contains('hidden')) {
-        configPanels.style.opacity = '0';
-        configPanels.style.transform = 'translateY(10px)';
-      }
-      if (configsManagement && !configsManagement.classList.contains('hidden')) {
-        configsManagement.style.opacity = '0';
-        configsManagement.style.transform = 'translateY(10px)';
-      }
-      sectionTransitionTimer = setTimeout(() => {
-        renderConfigControls(link.dataset.section);
-        if (configPanels) {
-          configPanels.style.opacity = '1';
-          configPanels.style.transform = 'translateY(0)';
-          configPanels.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-        }
-        if (configsManagement) {
-          configsManagement.style.opacity = '1';
-          configsManagement.style.transform = 'translateY(0)';
-          configsManagement.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
-        }
-      }, 200);
-    });
-  }
-
-  if (configEditor) {
-    configEditor.style.display = 'none';
-  }
-
-  // Initialize
-  applyBrandingLogo();
-  checkSession();
-});
