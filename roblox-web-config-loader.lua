@@ -108,6 +108,15 @@ socket.OnMessage:Connect(function(msg)
     end
 
     print("Website config applied (cloud overrides script defaults)")
+
+    task.delay(0.35, function()
+        local ok2, err2 = applyConfig(data.config)
+        if not ok2 then
+            warn("Reapply failed: " .. tostring(err2))
+            return
+        end
+        print("Website config reapplied")
+    end)
 end)
 
 socket.OnClose:Connect(function()
