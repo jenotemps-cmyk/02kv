@@ -1,4 +1,4 @@
-print("Sacrifice loader started")
+print("[Sacrifice] Loader started")
 
 local SERVER_URL = "wss://getsacrifice.bonto.run?token=PASTE_YOUR_TOKEN_HERE"
 local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
@@ -7,7 +7,11 @@ local HttpService = game:GetService("HttpService")
 local function cloneTable(src)
     local out = {}
     for k, v in pairs(src) do
-        out[k] = (typeof(v) == "table") and cloneTable(v) or v
+        if type(v) == "table" then
+            out[k] = cloneTable(v)
+        else
+            out[k] = v
+        end
     end
     return out
 end
@@ -15,13 +19,21 @@ end
 local function syncIntoLiveTable(liveTable, newTable)
     table.clear(liveTable)
     for k, v in pairs(newTable) do
-        liveTable[k] = (typeof(v) == "table") and cloneTable(v) or v
+        if type(v) == "table" then
+            liveTable[k] = cloneTable(v)
+        else
+            liveTable[k] = v
+        end
     end
 end
 
 local function applyConfig(configText)
-    local liveConfig = getgenv().sacrifice or getgenv().Sacrifice
+    if type(configText) ~= "string" or #configText == 0 then
+        return false, "Config text is empty or invalid"
+    end
 
+    local liveConfig = getgenv().sacrifice or getgenv().Sacrifice
+    
     local configFunc, compileErr = loadstring(configText)
     if not configFunc then
         return false, "Failed to compile config: " .. tostring(compileErr)
@@ -33,12 +45,11 @@ local function applyConfig(configText)
     end
 
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
-    if typeof(newConfig) ~= "table" then
-        return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
+    if type(newConfig) ~= "table" then
+        return false, "Config did not create getgenv().sacrifice or getgenv().Sacrifice table"
     end
 
-    if typeof(liveConfig) == "table" and liveConfig ~= newConfig then
-        -- Keep same table reference so source locals still see updates
+    if type(liveConfig) == "table" and liveConfig ~= newConfig then
         syncIntoLiveTable(liveConfig, newConfig)
         getgenv().sacrifice = liveConfig
         getgenv().Sacrifice = liveConfig
@@ -51,74 +62,85 @@ local function applyConfig(configText)
 end
 
 local socket
-local ok, err = pcall(function()
+local connectOk, connectErr = pcall(function()
     socket = WebSocket.connect(SERVER_URL)
 end)
 
-if not ok or not socket then
-    warn("WebSocket failed:", err)
+if not connectOk or not socket then
+    warn("[Sacrifice] WebSocket connection failed: " .. tostring(connectErr))
     return
 end
 
-print("Connected to Sacrifice WebSocket")
+print("[Sacrifice] Connected to WebSocket")
 
 local hasLoadedSource = false
 
 socket.OnMessage:Connect(function(msg)
-    print("Received packet")
+    print("[Sacrifice] Received message")
+
+    if not msg or #msg == 0 then
+        return
+    end
 
     local decodedOk, data = pcall(function()
         return HttpService:JSONDecode(msg)
     end)
 
     if not decodedOk then
-        warn("Could not decode packet")
+        warn("[Sacrifice] Failed to decode message")
         return
     end
 
-    if data.type ~= "init" and data.type ~= "update" then
+    if not data or (data.type ~= "init" and data.type ~= "update") then
         return
     end
 
-    print("Lua configuration text received")
+    print("[Sacrifice] Received config message, type: " .. tostring(data.type))
 
     if not hasLoadedSource then
         hasLoadedSource = true
-        print("Initializing main source script...")
+        print("[Sacrifice] Loading main source script...")
 
         local sourceOk, sourceErr = pcall(function()
             local source = game:HttpGet(SOURCE_URL)
-            print("Source downloaded, length:", #source)
+            if not source or #source == 0 then
+                error("Source is empty")
+            end
+            print("[Sacrifice] Source downloaded, size: " .. #source .. " bytes")
             loadstring(source)()
         end)
 
         if not sourceOk then
-            warn("Source script error: " .. tostring(sourceErr))
+            warn("[Sacrifice] Source script error: " .. tostring(sourceErr))
             hasLoadedSource = false
             return
         end
 
-        print("Source script executed successfully")
+        print("[Sacrifice] Source script loaded successfully")
     end
 
     local configOk, configErr = applyConfig(data.config)
     if not configOk then
-        warn(configErr)
+        warn("[Sacrifice] Config apply failed: " .. tostring(configErr))
         return
     end
 
-    print("Website config applied (cloud overrides script defaults)")
+    print("[Sacrifice] Config applied successfully")
 
     task.delay(0.35, function()
-        local ok2, err2 = applyConfig(data.config)
-        if not ok2 then
-            warn("Reapply failed: " .. tostring(err2))
+        local reapplyOk, reapplyErr = pcall(function()
+            return applyConfig(data.config)
+        end)
+        if not reapplyOk then
+            warn("[Sacrifice] Reapply failed: " .. tostring(reapplyErr))
             return
         end
-        print("Website config reapplied")
+        print("[Sacrifice] Config reapplied")
     end)
 end)
 
 socket.OnClose:Connect(function()
-    warn("Sacrifice WebSocket closed")
+    warn("[Sacrifice] WebSocket connection closed")
 end)
+
+print("[Sacrifice] Loader ready, waiting for config messages...")
