@@ -150,8 +150,6 @@ function migrateAllUserConfigsToDefault() {
 
   if (migrated > 0) {
     writeLocalDB(db);
-
-  broadcastConfigUpdate(req.user.username, config);
     console.log(`[Migration] ${migrated} account(s) now use default-config.lua`);
   }
 }
