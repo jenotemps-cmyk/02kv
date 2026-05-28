@@ -245,11 +245,19 @@ server.on('upgrade', (request, socket, head) => {
   }, {});
   token = cookies.token;
 
+  if (!token && request.headers.authorization) {
+    const bearer = request.headers.authorization.match(/^Bearer\s+(.+)$/i);
+    if (bearer) {
+      token = bearer[1].trim();
+      console.log('[WS] Token from Authorization header');
+    }
+  }
+
   if (!token && request.url) {
     const match = request.url.match(/[?&]token=([^&]+)/);
     if (match) {
       token = decodeURIComponent(match[1]);
-      console.log(`[WS] Token from URL parameter`);
+      console.log('[WS] Token from URL parameter');
     }
   }
 
@@ -567,9 +575,13 @@ app.post('/api/auth/login', async (req, res) => {
     { expiresIn: '7d' }
   );
 
+  const cookieSecure = process.env.COOKIE_SECURE === 'true'
+    || process.env.NODE_ENV === 'production'
+    || Boolean(process.env.RAILWAY_ENVIRONMENT);
+
   res.cookie('token', token, {
     httpOnly: true,
-    secure: false,
+    secure: cookieSecure,
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
