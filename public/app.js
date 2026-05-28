@@ -992,30 +992,15 @@ local RETRY_DELAY = 2
 
 local HttpService = game:GetService("HttpService")
 
-local function deepMerge(target, source)
-    if type(target) ~= "table" or type(source) ~= "table" then return source end
-    for k, v in pairs(source) do
-        if type(v) == "table" and type(target[k]) == "table" then
-            deepMerge(target[k], v)
-        else
-            target[k] = v
-        end
-    end
-    return target
-end
-
 local function applyConfig(configText)
-    local before = getgenv().sacrifice or getgenv().Sacrifice
     local fn, err = loadstring(configText)
     if not fn then warn("Compile error: "..err) return false end
     local ok, err = pcall(fn)
     if not ok then warn("Execute error: "..err) return false end
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
     if type(newConfig) ~= "table" then warn("No config table found") return false end
-    local live = before
-    if type(live) == "table" then deepMerge(live, newConfig) else live = newConfig end
-    getgenv().sacrifice = live
-    getgenv().Sacrifice = live
+    getgenv().sacrifice = newConfig
+    getgenv().Sacrifice = newConfig
     return true
 end
 
@@ -1051,15 +1036,26 @@ socket.OnMessage:Connect(function(msg)
     if msg == "ping" then return end
     local ok, data = pcall(function() return HttpService:JSONDecode(msg) end)
     if not ok or (data.type ~= "init" and data.type ~= "update") then return end
-    if not applyConfig(data.config) then return end
-    if loaded then print("Config updated") return end
-    loaded = true
-    local srcSuccess, src = pcall(function() return game:HttpGet(SOURCE_URL) end)
-    if srcSuccess and src then
-        local fn, err = loadstring(src)
-        if fn then pcall(fn) print("Source loaded") else warn("Source error: "..err) end
-    else
-        warn("Failed to download source")
+    if not loaded then
+        loaded = true
+        local srcSuccess, src = pcall(function() return game:HttpGet(SOURCE_URL) end)
+        if srcSuccess and src then
+            local fn, err = loadstring(src)
+            if fn then
+                local runOk, runErr = pcall(fn)
+                if not runOk then warn("Source error: "..tostring(runErr)) return end
+                print("Source loaded")
+            else
+                warn("Source error: "..tostring(err))
+                return
+            end
+        else
+            warn("Failed to download source")
+            return
+        end
+    end
+    if applyConfig(data.config) then
+        print("Cloud config applied")
     end
 end)
 
