@@ -150,6 +150,8 @@ function migrateAllUserConfigsToDefault() {
 
   if (migrated > 0) {
     writeLocalDB(db);
+
+  broadcastConfigUpdate(req.user.username, config);
     console.log(`[Migration] ${migrated} account(s) now use default-config.lua`);
   }
 }
@@ -578,7 +580,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   res.cookie('token', token, {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
