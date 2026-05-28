@@ -17,10 +17,17 @@ end
 
 -- Apply cloud config by merging it into the existing Sacrifice table
 local function applyConfig(configText)
+    print("[DEBUG] Applying config, type:", type(configText))
+    if not configText then
+        warn("Config text is nil")
+        return false
+    end
+    
     -- Parse the config text into a table
     local configFunc, compileErr = loadstring("return " .. configText)
     if not configFunc then
         warn("Failed to compile config:", compileErr)
+        print("[DEBUG] Failed config text:", configText:sub(1, 500))
         return false
     end
 
@@ -31,12 +38,15 @@ local function applyConfig(configText)
     end
 
     if type(cloudConfig) ~= "table" then
-        warn("Config is not a table")
+        warn("Config is not a table, got:", type(cloudConfig))
         return false
     end
 
+    print("[DEBUG] Parsed config successfully, has keys:", cloudConfig and "yes" or "no")
+
     -- Merge cloud config into existing Sacrifice table
     if getgenv().Sacrifice then
+        print("[DEBUG] Merging into existing Sacrifice table")
         deepMerge(getgenv().Sacrifice, cloudConfig)
         getgenv().sacrifice = getgenv().Sacrifice
         getgenv().sacrifice.Triggerbot = getgenv().sacrifice['Trigger Bot']
@@ -97,6 +107,8 @@ socket.OnMessage:Connect(function(msg)
 
     if data.type == "update" then
         print("✓ Received config update from website")
+        print("[DEBUG] Config length:", data.config and #data.config or "nil")
+        print("[DEBUG] Config preview:", data.config and data.config:sub(1, 200) or "nil")
         applyConfig(data.config)
     end
 end)
