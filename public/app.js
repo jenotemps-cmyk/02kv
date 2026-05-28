@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const API_BASE = '';
   const apiUrl = (path) => `${API_BASE}${path}`;
-  window.SACRIFICE_APP_BUILD = 'app-v23-sacrifice-config-hub';
+  window.SACRIFICE_APP_BUILD = 'app-v24-full-sacrifice-config';
 
   let activeSessionToken = null;
   let activeUsername = null;
@@ -256,8 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const silentCoreControls = [
     { type: 'toggle', label: 'Enable Silent Aim', pattern: '(\\[\\x27Silent Aim\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
     { type: 'toggle', label: 'Ignore FOV', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Ignore Fov\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'toggle', label: 'One Tap Mode', pattern: '(\\[\\x27One Tap\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'select', label: 'Hit Part', pattern: '(\\[\\x27Hit Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Closest Point', options: ['Closest Point', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso'] },
+    { type: 'toggle', label: 'One Tap Mode', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27One Tap\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'select', label: 'Hit Part', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Hit Part\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Closest Point', options: ['Closest Point', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso'], quoteMode: 'single' },
     { type: 'range', label: 'Hit Chance', pattern: '(\\bHitChance\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 100, min: 0, max: 100, step: 1, suffix: '%' },
     { type: 'range', label: 'Smoothing', pattern: '(\\bSmoothing\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.1, min: 0, max: 1, step: 0.01 },
     { type: 'select', label: 'Mode', pattern: '(\\bMode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Target', options: ['Target', 'Automatic'] },
@@ -269,51 +269,72 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   const silentFovControls = [
-    { type: 'toggle', label: 'FOV Enabled', pattern: '(\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'toggle', label: 'FOV Visible', pattern: '(\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'FOV Radius', pattern: '(\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
-    { type: 'range', label: 'FOV Thickness', pattern: '(\\[\\x27Thickness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
-    { type: 'range', label: 'FOV Transparency', pattern: '(\\[\\x27Transparency\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
-    { type: 'toggle', label: 'FOV Filled', pattern: '(\\[\\x27Filled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'text', label: 'FOV Color (R,G,B)', pattern: '(\\[\\x27Color\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' }
+    { type: 'toggle', label: 'FOV Enabled', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'FOV Visible', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'FOV Radius', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Radius\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
+    { type: 'range', label: 'FOV Thickness', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Thickness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'FOV Transparency', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Transparency\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
+    { type: 'toggle', label: 'FOV Filled', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Filled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'FOV Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\][\\s\\S]*?\\[\\x27Color\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' }
   ];
 
   const silentLegitControls = [
-    { type: 'toggle', label: 'Legit Mode', pattern: '(\\[\\x27Legit\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Legit Hit Chance', pattern: '(\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Hit Chance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 100, min: 0, max: 100, step: 1, suffix: '%' },
-    { type: 'toggle', label: 'FOV Scaling Hit Chance', pattern: '(\\[\\x27FovScalingHitChance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'toggle', label: 'Anti Curve', pattern: '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Anti Curve Max Angle', pattern: '(\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
-    { type: 'toggle', label: 'Anti Aimview', pattern: '(\\[\\x27Anti Aimview\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Anti Aimview Max Angle', pattern: '(\\[\\x27Anti Aimview\\x27\\][\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
-    { type: 'toggle', label: 'Scaling', pattern: '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Scaling Factor', pattern: '(\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Factor\\x27\\]\\s*=\\s*)([0-9.]+)(\\})', fallback: 1, min: 0, max: 5, step: 0.1 },
-    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1222, min: 0, max: 5000, step: 25, suffix: 'studs' },
-    { type: 'toggle', label: 'Auto Distance', pattern: '(\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+    { type: 'toggle', label: 'Legit Mode', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Legit Hit Chance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Hit Chance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 100, min: 0, max: 100, step: 1, suffix: '%' },
+    { type: 'toggle', label: 'FOV Scaling Hit Chance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27FovScalingHitChance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Distance Scaling Hit Chance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27DistanceScalingHitChance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Legit Max Distance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 800, min: 0, max: 5000, step: 25, suffix: 'studs' },
+    { type: 'toggle', label: 'Prefer Visible', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Prefer Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Legit Smoothing', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Smoothing\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Legit Smoothing Factor', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Smoothing\\x27\\][\\s\\S]*?\\[\\x27Factor\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.35, min: 0, max: 1, step: 0.05 },
+    { type: 'toggle', label: 'Reaction Delay', pattern: '(\\[\\x27Reaction Delay\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Reaction Delay Min', pattern: '(\\[\\x27Reaction Delay\\x27\\][\\s\\S]*?\\[\\x27Min\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.05, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'range', label: 'Reaction Delay Max', pattern: '(\\[\\x27Reaction Delay\\x27\\][\\s\\S]*?\\[\\x27Max\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.15, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Legit Wall Check', pattern: '(\\[\\x27Wall Check\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Anti Curve (Legit)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Anti Curve\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Anti Curve Max Angle', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Anti Curve\\x27\\][\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
+    { type: 'toggle', label: 'Anti Aimview', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Anti Aimview\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Anti Aimview Max Angle', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Anti Aimview\\x27\\][\\s\\S]*?\\[\\x27Max Angle\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 90, step: 1, suffix: '°' },
+    { type: 'toggle', label: 'Scaling', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Scaling\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Scaling Factor', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Scaling\\x27\\][\\s\\S]*?\\[\\x27Factor\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 5, step: 0.1 },
+    { type: 'range', label: 'Legit Checks Max Distance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1222, min: 0, max: 5000, step: 25, suffix: 'studs' },
+    { type: 'toggle', label: 'Legit Auto Distance', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Legit\\x27\\][\\s\\S]*?\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'FOV Override', pattern: '(\\[\\x27Override\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+  ];
+
+  const silentLegacyControls = [
+    { type: 'toggle', label: 'Anti Curve (Main)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bAntiCurve\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'select', label: 'Hit Part (Legacy)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bHitPart\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Closest', options: ['Closest', 'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso', 'Closest Point'] },
+    { type: 'range', label: 'Horizontal Prediction', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?HorizontalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Vertical Prediction', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?VerticalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'toggle', label: 'Legacy FOV Visible', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Visible\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Legacy FOV Radius', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Radius\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 350, min: 0, max: 1000, step: 5, suffix: 'px' },
+    { type: 'text', label: 'Legacy FOV Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '0, 17, 255', valueMode: 'raw' },
+    { type: 'select', label: 'Legacy FOV Mode', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\bFOV\\s*=\\s*\\{[\\s\\S]*?Mode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Circle', options: ['Circle', 'Box', '3D'] }
   ];
 
   const silentPredictionControls = [
-    { type: 'toggle', label: 'Auto Predictions', pattern: '(\\[\\x27Auto Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
-    { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 15, min: 0, max: 50, step: 1 },
-    { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: 0, max: 10, step: 0.5 },
-    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: 0, max: 10, step: 0.5 },
-    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 1 }
+    { type: 'toggle', label: 'Auto Predictions', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 50, step: 1 },
+    { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 0.5 }
   ];
 
   const silentTracerControls = [
-    { type: 'toggle', label: 'Tracer Enabled', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Tracer Thickness', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Thickness\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
-    { type: 'range', label: 'Tracer Transparency', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Transparency\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
-    { type: 'text', label: 'Tracer Color (R,G,B)', pattern: '(Tracer\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' }
+    { type: 'toggle', label: 'Tracer Enabled', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Tracer Thickness', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Thickness\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'Tracer Transparency', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Transparency\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 1, step: 0.05 },
+    { type: 'text', label: 'Tracer Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' }
   ];
 
   const silentClosestControls = [
-    { type: 'range', label: 'Closest Point Samples', pattern: '(\\[\\x27Closest Point\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Samples\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3, min: 1, max: 20, step: 1 },
-    { type: 'toggle', label: 'Diagonal Sampling', pattern: '(\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27Diagonal\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'toggle', label: 'Show Points', pattern: '(\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27ShowPoints\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'text', label: 'Point Color (R,G,B)', pattern: '(\\[\\x27PointColor\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*\\})', fallback: '255, 0, 0', valueMode: 'raw' }
+    { type: 'range', label: 'Closest Point Samples', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Closest Point\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Samples\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3, min: 1, max: 20, step: 1 },
+    { type: 'toggle', label: 'Diagonal Sampling', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27Diagonal\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Show Points', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Closest Point\\x27\\][\\s\\S]*?\\[\\x27ShowPoints\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'text', label: 'Point Color (R,G,B)', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27PointColor\\x27\\]\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' }
   ];
 
   // ============================================================
@@ -327,8 +348,12 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'select', label: 'Activation Mode', pattern: '(\\[\\x27Activation\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Toggle', options: ['Toggle', 'Hold'] },
     { type: 'select', label: 'Trigger Mode', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Mode\\x27\\]\\s*=\\s*)\\x27([^\\x27]*)\\x27(\\s*,)', fallback: 'Fov', options: ['Fov', 'Target'] },
     { type: 'toggle', label: 'Knock Check', pattern: '(\\[\\x27Knock Check\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3411, min: 0, max: 10000, step: 50, suffix: 'studs' },
-    { type: 'toggle', label: 'Auto Distance', pattern: '(\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 3411, min: 0, max: 10000, step: 50, suffix: 'studs' },
+    { type: 'toggle', label: 'Auto Distance', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Distance\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Active', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\bActive\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\bPrediction\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'Delay', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\bDelay\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.01, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'select', label: 'Legacy Mode', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\bMode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Toggle', options: ['Toggle', 'Hold', 'Always'] }
   ];
 
   const triggerHitControls = [
@@ -338,13 +363,26 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Input Start Delay', pattern: '(\\[\\x27Start\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 1, step: 0.01, suffix: 's' },
     { type: 'range', label: 'Input End Delay', pattern: '(\\[\\x27End\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: 0, max: 1, step: 0.01, suffix: 's' },
     { type: 'toggle', label: 'Custom Hitbox Size', pattern: '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Custom Hitbox Value', pattern: '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Value\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 40, min: 0, max: 200, step: 1 }
+    { type: 'range', label: 'Custom Hitbox Value', pattern: '(CustomSize\\s*=\\s*\\{[\\s\\S]*?Value\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 40, min: 0, max: 200, step: 1 },
+    { type: 'toggle', label: 'HitParts Type Mode', pattern: '(HitParts\\s*=\\s*\\{[\\s\\S]*?Type\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Trigger FOV Visible', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+  ];
+
+  const triggerPredictionControls = [
+    { type: 'toggle', label: 'Auto Predictions', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 50, step: 1 },
+    { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 0.5 }
   ];
 
   const triggerWeaponControls = [
     { type: 'toggle', label: 'Enable Double Barrel SG', pattern: '', fallback: true, weaponName: '[Double-Barrel SG]' },
     { type: 'toggle', label: 'Enable Revolver', pattern: '', fallback: true, weaponName: '[Revolver]' },
     { type: 'toggle', label: 'Enable Tactical Shotgun', pattern: '', fallback: true, weaponName: '[TacticalShotgun]' },
+    { type: 'toggle', label: 'Enable Tactical Shot shotgun', pattern: '', fallback: true, weaponName: '[Tactical Shot shotgun]' },
     { type: 'toggle', label: 'Enable Glock', pattern: '', fallback: true, weaponName: '[Glock]' }
   ];
 
@@ -369,16 +407,16 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Snappiness', pattern: '(\\[\\x27Snappiness\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.045, min: 0, max: 1, step: 0.005 },
     { type: 'toggle', label: 'Dynamic Height Compensation', pattern: '(\\[\\x27DynamicHeightCompensation\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
     { type: 'range', label: 'Vertical Adjustment Offset', pattern: '(\\[\\x27VerticalAdjustmentOffset\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 1 },
-    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1000, min: 0, max: 5000, step: 50, suffix: 'studs' },
+    { type: 'range', label: 'Max Distance', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Checks\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Max Distance\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1000, min: 0, max: 5000, step: 50, suffix: 'studs' },
     { type: 'toggle', label: 'First Person', pattern: '(\\[\\x27Checks\\x27\\][\\s\\S]*?\\[\\x27First Person\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
     { type: 'toggle', label: 'Third Person', pattern: '(\\[\\x27Checks\\x27\\][\\s\\S]*?\\[\\x27Third Person\\x27\\]\\s*=\\s*)(true|false)(\\s*\\})', fallback: true }
   ];
 
   const cameraPredictionControls = [
-    { type: 'toggle', label: 'Enable Camera Predictions', pattern: '(\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: 0, max: 10, step: 0.025 },
-    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.225, min: 0, max: 10, step: 0.025 },
-    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.125, min: -5, max: 5, step: 0.025 }
+    { type: 'toggle', label: 'Enable Camera Predictions', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.225, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.125, min: -5, max: 5, step: 0.025 }
   ];
 
   const cameraShakeControls = [
@@ -406,6 +444,28 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Spasm Max Distance', pattern: '(Spasm\\s*=\\s*\\{[\\s\\S]*?MaxSpikeDistance\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 5.5, min: 0, max: 20, step: 0.5 }
   ];
 
+  const cameraAutoPredictionControls = [
+    { type: 'toggle', label: 'Auto Predictions', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Auto Prediction Intensity', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
+    { type: 'range', label: 'Auto Prediction Max Offset', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 50, step: 1 },
+    { type: 'toggle', label: 'Camlock FOV Visible', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Settings\\x27\\][\\s\\S]*?\\[\\x27Fov\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Visible\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false }
+  ];
+
+  const cameraLegacyControls = [
+    { type: 'select', label: 'Hit Part (Legacy)', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\bHitPart\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'UpperTorso', options: ['Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso'] },
+    { type: 'select', label: 'Target Mode', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?TargetMode\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Toggle', options: ['Toggle', 'Hold', 'Always'] },
+    { type: 'range', label: 'Camlock FOV Size', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\bFov\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 20, min: 0, max: 500, step: 1 },
+    { type: 'range', label: 'Horizontal Prediction', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?HorizontalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Vertical Prediction', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?VerticalPrediction\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 }
+  ];
+
+  const cameraTracerControls = [
+    { type: 'toggle', label: 'Tracer Enabled', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Tracer Thickness', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Thickness\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1.5, min: 0, max: 10, step: 0.1 },
+    { type: 'range', label: 'Tracer Opacity', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Opacity\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.7, min: 0, max: 1, step: 0.05 },
+    { type: 'text', label: 'Tracer Color (R,G,B)', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?Tracer\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*,)', fallback: '255, 0, 0', valueMode: 'raw' }
+  ];
+
   // ============================================================
   // VISUALS CONTROLS
   // ============================================================
@@ -419,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   const visualsWatermarkControls = [
-    { type: 'toggle', label: 'Watermark Enabled', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Watermark Enabled', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
     { type: 'text', label: 'Watermark Text', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Username\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'Sacrifice.cc' },
     { type: 'text', label: 'Watermark Color (R,G,B)', pattern: '(Watermark\\s*=\\s*\\{[\\s\\S]*?Color\\s*=\\s*Color3\\.fromRGB\\()([^)]+)(\\)\\s*\\})', fallback: '12, 12, 255', valueMode: 'raw' }
   ];
@@ -437,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // MOVEMENT CONTROLS
   // ============================================================
   const movementSpeedControls = [
-    { type: 'toggle', label: 'Speed Mod Enabled', pattern: '(\\["Speed Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'toggle', label: 'Speed Mod Enabled', pattern: '(\\["Speed Modifications"\\]\\s*=\\s*\\{[\\s\\S]*?Options\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
     { type: 'range', label: 'Default Walk Speed', pattern: '(DefaultSpeed\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 35, min: 0, max: 500, step: 1, suffix: 'walkspeed' },
     { type: 'select', label: 'Speed Method', pattern: '(Method\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'WalkSpeed', options: ['WalkSpeed', 'Velocity'] },
     { type: 'text', label: 'Speed Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'V' }
@@ -464,11 +524,13 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Orbit Height', pattern: '(Height\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0, min: -20, max: 20, step: 1 },
     { type: 'range', label: 'Orbit Speed', pattern: '(Speed\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 6150, min: 0, max: 20000, step: 100 },
     { type: 'toggle', label: 'Auto Kill', pattern: '(AutoKill\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'toggle', label: 'Auto Reload', pattern: '(AutoReload\\s*=\\s*)(true|false)(\\s*,)', fallback: true }
+    { type: 'toggle', label: 'Auto Reload', pattern: '(AutoReload\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Reload Ammo Count', pattern: '(ReloadAmmoCount\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0, min: 0, max: 999, step: 1 }
   ];
 
   const movementMiscControls = [
     { type: 'toggle', label: 'Noclip Enabled', pattern: '(Noclip\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'toggle', label: 'Noclip Active', pattern: '(Noclip\\s*=\\s*\\{[\\s\\S]*?Active\\s*=\\s*)(true|false)(\\s*\\})', fallback: false },
     { type: 'text', label: 'Noclip Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*,)', fallback: 'N' },
     { type: 'toggle', label: 'Panic Ground', pattern: '(\\["Panic Ground"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
     { type: 'text', label: 'Panic Keybind', pattern: '(Keybind\\s*=\\s*)"([^"]*)"(\\s*\\})', fallback: 'P' },
@@ -494,6 +556,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const weaponsRageControls = [
     { type: 'toggle', label: 'Rage Mode', pattern: '(RageMode\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
     { type: 'range', label: 'Fire Interval', pattern: '(FireInterval\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.00001, min: 0, max: 0.1, step: 0.00001, suffix: 's' }
+  ];
+
+  const weaponsDelayControls = [
+    { type: 'toggle', label: 'Revolver Delay Override', pattern: '(\\["\\[Revolver\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Revolver Delay', pattern: '(\\["\\[Revolver\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Delay\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.05, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Glock Delay Override', pattern: '(\\["\\[Glock\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Glock Delay', pattern: '(\\["\\[Glock\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Delay\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.05, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Double Barrel Delay Override', pattern: '(\\["\\[Double-Barrel SG\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Double Barrel Delay', pattern: '(\\["\\[Double-Barrel SG\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Delay\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.05, min: 0, max: 1, step: 0.01, suffix: 's' },
+    { type: 'toggle', label: 'Tactical Shotgun Delay Override', pattern: '(\\["\\[Tactical Shotgun\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
+    { type: 'range', label: 'Tactical Shotgun Delay', pattern: '(\\["\\[Tactical Shotgun\\]"\\]\\s*=\\s*\\{[\\s\\S]*?Delay\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.05, min: 0, max: 1, step: 0.01, suffix: 's' }
   ];
 
   const weaponsSkinControls = [
@@ -522,9 +595,9 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
 
   const miscRangeControls = [
-    { type: 'toggle', label: 'Infinite Range', pattern: '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Range Distance', pattern: '(range\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1000, min: 100, max: 5000, step: 50, suffix: 'studs' },
-    { type: 'range', label: 'Bypass Position', pattern: '(bypasspos\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 10, min: 0, max: 50, step: 1 }
+    { type: 'toggle', label: 'Infinite Range', pattern: '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?Enabled\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
+    { type: 'range', label: 'Range Distance', pattern: '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?Range\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 10000, min: 100, max: 50000, step: 50, suffix: 'studs' },
+    { type: 'range', label: 'Bypass Position', pattern: '(\\["Infinite Range"\\]\\s*=\\s*\\{[\\s\\S]*?BypassPos\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 1, min: 0, max: 50, step: 1 }
   ];
 
   const miscAvatarControls = [
@@ -544,6 +617,40 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // HELPER FUNCTIONS
   // ============================================================
+  function getTriggerWeaponsBlock() {
+    if (!configEditor?.value) return '';
+    const match = configEditor.value.match(/(\['Trigger Bot'\][\s\S]*?Weapons\s*=\s*\{)([\s\S]*?)(\n\s*\},)/);
+    return match ? match[2] : '';
+  }
+
+  function isTriggerWeaponEnabled(weaponName) {
+    const block = getTriggerWeaponsBlock();
+    const escaped = weaponName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`['"]${escaped}['"]`).test(block);
+  }
+
+  function setTriggerWeaponEnabled(weaponName, enabled) {
+    if (!configEditor?.value) return;
+    const sectionMatch = configEditor.value.match(/(\['Trigger Bot'\][\s\S]*?Weapons\s*=\s*\{)([\s\S]*?)(\n\s*\},)/);
+    if (!sectionMatch) {
+      showToast('Could not find Trigger Bot weapons list', 'warning');
+      return;
+    }
+    let inner = sectionMatch[2];
+    const line = `            '${weaponName}',`;
+    const escaped = weaponName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const entryPattern = new RegExp(`\\s*['"]${escaped}['"],?\\s*\\n?`, 'g');
+    if (enabled) {
+      if (!isTriggerWeaponEnabled(weaponName)) {
+        inner = inner.trimEnd() + (inner.trim() ? '\n' : '') + line + '\n';
+      }
+    } else {
+      inner = inner.replace(entryPattern, '');
+    }
+    configEditor.value = configEditor.value.replace(sectionMatch[0], `${sectionMatch[1]}${inner}${sectionMatch[3]}`);
+    if (saveStatus) saveStatus.textContent = 'Unsaved changes';
+  }
+
   function getControlValue(control) {
     if (!configEditor || !configEditor.value) return control.fallback;
     const match = configEditor.value.match(new RegExp(control.pattern, 'm'));
@@ -557,7 +664,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (control.type === 'toggle') return value ? 'true' : 'false';
     if (control.type === 'range') return String(Number(value));
     if (control.valueMode === 'raw') return String(value);
-    if (control.type === 'text' || control.type === 'select') return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+    if (control.type === 'select') {
+      const quote = control.quoteMode === 'single' ? "'" : '"';
+      const escaped = String(value).replace(/\\/g, '\\\\').replace(new RegExp(quote, 'g'), `\\${quote}`);
+      return `${quote}${escaped}${quote}`;
+    }
+    if (control.type === 'text') return `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
     return String(value);
   }
 
@@ -616,6 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { title: 'Core Settings', controls: silentCoreControls },
         { title: 'Field of View (FOV)', controls: silentFovControls },
         { title: 'Legit & Anti-Cheat', controls: silentLegitControls },
+        { title: 'Legacy / Extra', controls: silentLegacyControls },
         { title: 'Predictions', controls: silentPredictionControls },
         { title: 'Tracers', controls: silentTracerControls },
         { title: 'Closest Point', controls: silentClosestControls }
@@ -624,6 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cards = [
         { title: 'Core Settings', controls: triggerCoreControls },
         { title: 'Hit Settings', controls: triggerHitControls },
+        { title: 'Predictions', controls: triggerPredictionControls },
         { title: 'Weapons', controls: triggerWeaponControls }
       ];
     } else if (sectionKey === 'camera') {
@@ -631,8 +745,11 @@ document.addEventListener('DOMContentLoaded', () => {
         { title: 'Core Settings', controls: cameraCoreControls },
         { title: 'Target Settings', controls: cameraTargetControls },
         { title: 'Predictions', controls: cameraPredictionControls },
+        { title: 'Auto Predictions & FOV', controls: cameraAutoPredictionControls },
+        { title: 'Legacy / Extra', controls: cameraLegacyControls },
         { title: 'Shake Settings', controls: cameraShakeControls },
-        { title: 'Robotic Settings', controls: cameraRoboticControls }
+        { title: 'Robotic Settings', controls: cameraRoboticControls },
+        { title: 'Tracers', controls: cameraTracerControls }
       ];
     } else if (sectionKey === 'visuals') {
       cards = [
@@ -652,6 +769,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cards = [
         { title: 'Spread & Wallbang', controls: weaponsSpreadControls },
         { title: 'Fire Rate', controls: weaponsFireRateControls },
+        { title: 'Per-Weapon Delay', controls: weaponsDelayControls },
         { title: 'Rage Mode', controls: weaponsRageControls },
         { title: 'Skin Changer', controls: weaponsSkinControls }
       ];
@@ -679,7 +797,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const control of card.controls) {
         if (control.weaponName) {
-          // Weapon toggles - simplified display
           const row = document.createElement('label');
           row.className = 'setting-row setting-toggle';
           const label = document.createElement('span');
@@ -690,8 +807,8 @@ document.addEventListener('DOMContentLoaded', () => {
           switchEl.className = 'switch';
           const input = document.createElement('input');
           input.type = 'checkbox';
-          input.checked = control.fallback;
-          input.disabled = true;
+          input.checked = isTriggerWeaponEnabled(control.weaponName);
+          input.addEventListener('change', () => setTriggerWeaponEnabled(control.weaponName, input.checked));
           switchEl.appendChild(input);
           switchEl.appendChild(document.createElement('span'));
           row.appendChild(switchEl);
