@@ -17,46 +17,54 @@ end
 
 -- Apply cloud config by merging it into the existing Sacrifice table
 local function applyConfig(configText)
+    if getgenv().Sacrifice_ApplyCloudConfig and getgenv().Sacrifice_ApplyCloudConfig ~= applyConfig then
+        return getgenv().Sacrifice_ApplyCloudConfig(configText)
+    end
     print("[DEBUG] Applying config, type:", type(configText))
-
-    if not configText or type(configText) ~= "string" then
-        warn("Config text invalid")
+    if not configText then
+        warn("Config text is nil")
         return false
     end
-
-    local configFunc, compileErr = loadstring(configText)
-
+    
+    -- Parse the config text into a table
+    local configFunc, compileErr = loadstring("return " .. configText)
     if not configFunc then
         warn("Failed to compile config:", compileErr)
         print("[DEBUG] Failed config text:", configText:sub(1, 500))
         return false
     end
 
-    local execOk, execErr = pcall(configFunc)
-
-    if not execOk then
-        warn("Failed to execute config:", execErr)
+    local parseOk, cloudConfig = pcall(configFunc)
+    if not parseOk then
+        warn("Failed to parse config:", cloudConfig)
         return false
     end
-
-    local cloudConfig = getgenv().Sacrifice or getgenv().sacrifice
 
     if type(cloudConfig) ~= "table" then
-        warn("Cloud config did not create Sacrifice table")
+        warn("Config is not a table, got:", type(cloudConfig))
         return false
     end
 
-    print("[DEBUG] Config executed successfully")
+    print("[DEBUG] Parsed config successfully, has keys:", cloudConfig and "yes" or "no")
 
-    getgenv().sacrifice = getgenv().Sacrifice
-    getgenv().sacrifice.Triggerbot = getgenv().sacrifice['Trigger Bot']
-
-    if getgenv().Sacrifice_RefreshLocals then
-        pcall(getgenv().Sacrifice_RefreshLocals)
+    -- Merge cloud config into existing Sacrifice table
+    if getgenv().Sacrifice then
+        print("[DEBUG] Merging into existing Sacrifice table")
+        deepMerge(getgenv().Sacrifice, cloudConfig)
+        getgenv().sacrifice = getgenv().Sacrifice
+        getgenv().sacrifice.Triggerbot = getgenv().sacrifice['Trigger Bot']
+        
+        -- Trigger refresh if the source script has this function
+        if getgenv().Sacrifice_RefreshLocals then
+            getgenv().Sacrifice_RefreshLocals()
+        end
+        
+        print("✓ Cloud config applied successfully")
+        return true
+    else
+        warn("Sacrifice table not initialized yet")
+        return false
     end
-
-    print("✓ Cloud config applied successfully")
-    return true
 end
 
 -- Load the source script immediately
@@ -75,6 +83,8 @@ if not sourceOk then
 end
 
 print("✓ Source script loaded with defaults")
+
+getgenv().Sacrifice_ApplyCloudConfig = applyConfig
 
 -- Connect to WebSocket for config updates
 local socket
