@@ -1,6 +1,6 @@
 print("Sacrifice loader started")
 
-local SERVER_URL = "wss://getsacrifice.railway.app?token=PASTE_YOUR_TOKEN_HERE"
+local SERVER_URL = "wss://getsacrifice.up.railway.app?token=PASTE_YOUR_TOKEN_HERE"
 local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
 local HttpService = game:GetService("HttpService")
 
