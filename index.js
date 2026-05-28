@@ -122,35 +122,24 @@ function writeLocalDB(data) {
   }
 }
 
-/** Old saved configs lack v2 fields or use deprecated keys — replace with default-config.lua */
-function isLegacySacrificeConfig(config) {
-  if (!config || typeof config !== 'string') return true;
-  return (
-    !config.includes('DistanceScalingHitChance') ||
-    !config.includes('HorizontalPrediction') ||
-    config.includes('enabled = true') ||
-    config.includes('getgenv().sacrifice')
-  );
-}
-
+/** Only fill in missing configs — never overwrite saved user configs on boot. */
 function migrateAllUserConfigsToDefault() {
   const db = readLocalDB();
   let migrated = 0;
 
   for (const user of db) {
-    if (!isLegacySacrificeConfig(user.config)) continue;
+    const hasConfig = user.config && typeof user.config === 'string' && user.config.trim();
+    const looksLikeSacrifice = hasConfig && /getgenv\(\)\.[Ss]acrifice\s*=/i.test(user.config);
+    if (looksLikeSacrifice) continue;
 
     user.config = DEFAULT_LUA_CONFIG;
-    if (user.lastActivatedConfig) {
-      user.lastActivatedConfig = DEFAULT_LUA_CONFIG;
-    }
     migrated += 1;
-    console.log(`[Migration] Updated config for user: ${user.username}`);
+    console.log(`[Migration] Initialized empty config for user: ${user.username}`);
   }
 
   if (migrated > 0) {
     writeLocalDB(db);
-    console.log(`[Migration] ${migrated} account(s) now use default-config.lua`);
+    console.log(`[Migration] ${migrated} account(s) received default-config.lua`);
   }
 }
 
@@ -335,9 +324,10 @@ function activateConfigHandler(req, res) {
     return res.status(500).json({ error: 'User profile not found.' });
   }
 
-  const configToActivate = typeof req.body.config === 'string' ? req.body.config : user.config;
-  console.log(`[DEBUG] Using config from:`, req.body.config ? 'request body' : 'database');
-  const match = configToActivate.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
+  const configToActivate = (typeof req.body.config === 'string' && req.body.config.trim())
+    ? req.body.config.trim()
+    : user.config;
+  const match = configToActivate.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/i);
   if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
   }
@@ -578,7 +568,7 @@ app.post('/api/auth/login', async (req, res) => {
 
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
   });
@@ -620,7 +610,7 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Configuration string is required.' });
   }
 
-  const match = config.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
+  const match = config.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/i);
   if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
   }
@@ -628,7 +618,7 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
   if (userIndex !== -1) {
-    db[userIndex].config = config;
+    db[userIndex].config = config.trim();
     writeLocalDB(db);
     return res.json({ success: true, message: 'Configuration saved successfully!' });
   }
