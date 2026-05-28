@@ -321,9 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
     { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 50, step: 1 },
     { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
-    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
-    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 0.5 }
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Silent Aim\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 }
   ];
 
   const silentTracerControls = [
@@ -376,9 +376,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { type: 'range', label: 'Prediction Intensity', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Intensity\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 1, min: 0, max: 10, step: 0.5 },
     { type: 'range', label: 'Prediction Max Offset', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Auto Predictions\\x27\\][\\s\\S]*?\\[\\x27Max Offset\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 15, min: 0, max: 50, step: 1 },
     { type: 'toggle', label: 'Manual Predictions', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: false },
-    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
-    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
-    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*\\})', fallback: 0, min: -50, max: 50, step: 0.5 }
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Trigger Bot\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.-]+)(\\s*,)', fallback: 0, min: -50, max: 50, step: 0.5 }
   ];
 
   const triggerWeaponControls = [
@@ -417,9 +417,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const cameraPredictionControls = [
     { type: 'toggle', label: 'Enable Camera Predictions', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27Enabled\\x27\\]\\s*=\\s*)(true|false)(\\s*,)', fallback: true },
-    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: 0, max: 10, step: 0.025 },
-    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.225, min: 0, max: 10, step: 0.025 },
-    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*\\})', fallback: 0.125, min: -5, max: 5, step: 0.025 }
+    { type: 'range', label: 'Prediction X', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27x\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Y', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27y\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.225, min: 0, max: 10, step: 0.025 },
+    { type: 'range', label: 'Prediction Z', pattern: '(\\[\\x27Camlock\\x27\\][\\s\\S]*?\\[\\x27Predictions\\x27\\][\\s\\S]*?\\[\\x27Values\\x27\\]\\s*=\\s*\\{[\\s\\S]*?\\[\\x27z\\x27\\]\\s*=\\s*)([0-9.]+)(\\s*,)', fallback: 0.125, min: -5, max: 5, step: 0.025 }
   ];
 
   const cameraShakeControls = [
@@ -1027,47 +1027,63 @@ local RETRY_DELAY = 2
 
 local HttpService = game:GetService("HttpService")
 
-local function cloneTable(src)
-    local out = {}
+local function deepMerge(dst, src)
     for k, v in pairs(src) do
-        out[k] = (type(v) == "table") and cloneTable(v) or v
-    end
-    return out
-end
-
-local function syncIntoLiveTable(liveTable, newTable)
-    table.clear(liveTable)
-    for k, v in pairs(newTable) do
-        liveTable[k] = (type(v) == "table") and cloneTable(v) or v
+        if type(v) == "table" and type(dst[k]) == "table" then
+            deepMerge(dst[k], v)
+        else
+            dst[k] = v
+        end
     end
 end
 
 local function applyConfig(configText)
-    -- If the source script has loaded, use its cloud config applier
+    if not configText or configText == "" then
+        warn("Config text is empty")
+        return false
+    end
+
     if getgenv().Sacrifice_ApplyCloudConfig then
         local ok, err = getgenv().Sacrifice_ApplyCloudConfig(configText)
-        if not ok then
-            warn("Cloud config apply failed: " .. tostring(err))
-            return false
+        if ok then
+            getgenv().Sacrifice_CloudConfigReceived = true
+            return true
+        end
+        warn("Sacrifice_ApplyCloudConfig failed: " .. tostring(err))
+    end
+
+    local configFunc, compileErr = loadstring("return " .. configText)
+    if not configFunc then
+        warn("Failed to compile config: " .. tostring(compileErr))
+        return false
+    end
+
+    local parseOk, cloudConfig = pcall(configFunc)
+    if not parseOk or type(cloudConfig) ~= "table" then
+        warn("Failed to parse config: " .. tostring(cloudConfig))
+        return false
+    end
+
+    if getgenv().Sacrifice then
+        deepMerge(getgenv().Sacrifice, cloudConfig)
+        getgenv().sacrifice = getgenv().Sacrifice
+        if getgenv().sacrifice and getgenv().sacrifice["Trigger Bot"] then
+            getgenv().sacrifice.Triggerbot = getgenv().sacrifice["Trigger Bot"]
+        end
+        if getgenv().Sacrifice_RefreshLocals then
+            pcall(getgenv().Sacrifice_RefreshLocals)
         end
         getgenv().Sacrifice_CloudConfigReceived = true
         return true
     end
 
-    -- Fallback for initial config before source loads
-    local fn, err = loadstring(configText)
-    if not fn then warn("Compile error: "..err) return false end
-    local ok, err = pcall(fn)
-    if not ok then warn("Execute error: "..err) return false end
-    
-    local newConfig = getgenv().sacrifice or getgenv().Sacrifice
-    if type(newConfig) ~= "table" then warn("No config table found") return false end
-    
-    getgenv().sacrifice = newConfig
-    getgenv().Sacrifice = newConfig
+    getgenv().Sacrifice = cloudConfig
+    getgenv().sacrifice = cloudConfig
     getgenv().Sacrifice_CloudConfigReceived = true
     return true
 end
+
+getgenv().Sacrifice_ApplyCloudConfig = applyConfig
 
 local function connectWebSocket(url, retryCount)
     retryCount = retryCount or 0
@@ -1186,49 +1202,8 @@ print("Sacrifice ready - waiting for config...")`;
     }
   }
 
-  function collectAllControls() {
-    return [
-      ...silentCoreControls,
-      ...silentFovControls, 
-      ...silentLegitControls,
-      ...silentLegacyControls,
-      ...silentPredictionControls,
-      ...silentTracerControls,
-      ...silentClosestControls,
-      ...triggerCoreControls,
-      ...triggerHitControls,
-      ...triggerPredictionControls,
-      ...triggerWeaponControls,
-      ...cameraCoreControls,
-      ...cameraTargetControls,
-      ...cameraPredictionControls,
-      ...cameraShakeControls,
-      ...cameraRoboticControls,
-      ...cameraAutoPredictionControls,
-      ...cameraLegacyControls,
-      ...cameraTracerControls,
-      ...visualsEspControls,
-      ...visualsWatermarkControls,
-      ...visualsWorldControls,
-      ...movementSpeedControls,
-      ...movementJumpControls,
-      ...movementSpidermanControls,
-      ...movementOrbitControls,
-      ...movementMiscControls,
-      ...weaponsSpreadControls,
-      ...weaponsFireRateControls,
-      ...weaponsDelayControls,
-      ...weaponsRageControls,
-      ...weaponsSkinControls,
-      ...miscHitboxControls,
-      ...miscDamageControls,
-      ...miscRangeControls,
-      ...miscAvatarControls,
-      ...miscSoundControls
-    ].filter((control) => control && control.pattern);
-  }
-
-  // Generate current config from UI controls
+  // Sync only controls the user actually sees/edited (registry) into the Lua text.
+  // Avoids blasting fallback defaults across every regex match in the file.
   function generateCurrentConfig() {
     if (!configEditor || !configEditor.value) {
       console.error('[CONFIG] No config editor or config text available');
@@ -1236,26 +1211,22 @@ print("Sacrifice ready - waiting for config...")`;
     }
 
     let currentConfig = configEditor.value;
-    const allControls = collectAllControls();
-    
-    // Apply current UI values to config text
     let updatedCount = 0;
-    allControls.forEach(control => {
+
+    for (const [control] of controlRegistry.entries()) {
+      if (!control?.pattern) continue;
       try {
-        const currentValue = getControlValue(control);
         const pattern = new RegExp(control.pattern, 'm');
-        const formatted = formatControlValue(control, currentValue);
-        
-        if (pattern.test(currentConfig)) {
-          currentConfig = currentConfig.replace(pattern, `$1${formatted}$3`);
-          updatedCount++;
-        }
+        if (!pattern.test(currentConfig)) continue;
+        const formatted = formatControlValue(control, getControlValue(control));
+        currentConfig = currentConfig.replace(pattern, `$1${formatted}$3`);
+        updatedCount++;
       } catch (err) {
         console.warn(`Failed to update control ${control.label}:`, err);
       }
-    });
-    
-    console.log(`[CONFIG] Updated ${updatedCount} controls out of ${allControls.length}`);
+    }
+
+    console.log(`[CONFIG] Synced ${updatedCount} visible control(s) from UI`);
     return currentConfig;
   }
 
@@ -1291,11 +1262,25 @@ print("Sacrifice ready - waiting for config...")`;
       });
       const result = await parseApiResponse(response);
       if (!response.ok) throw new Error(result.error || 'Activation failed');
+
+      // Persist activated config so reloads and future sessions match what was pushed
+      try {
+        await fetch(apiUrl('/api/config/save'), {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ config: configData })
+        });
+        if (saveStatus) saveStatus.textContent = 'Activated & saved';
+      } catch (saveErr) {
+        console.warn('[CONFIG] Post-activate save failed:', saveErr);
+      }
+
       const count = Number(result.connectedClients || 0);
       if (count > 0) {
         showToast(`Activated for ${count} connection${count === 1 ? '' : 's'}!`, 'success');
       } else {
-        showToast('No executor connected', 'warning');
+        showToast('Config saved — connect your executor, then activate again', 'warning');
       }
       updateConnectionStatus();
     } catch (err) {
