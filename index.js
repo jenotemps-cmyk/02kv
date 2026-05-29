@@ -13,11 +13,7 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({
-  noServer: true,
-  clientTracking: true,
-  perMessageDeflate: false
-});
+const wss = new WebSocket.Server({ noServer: true });
 
 // Configuration
 const PORT = process.env.PORT || 3000;
@@ -25,36 +21,348 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_jwt_tokens';
 const DB_FILE = path.join(__dirname, 'database.json');
 
 // Default configuration (Sacrifice Lua table)
-const DEFAULT_LUA_CONFIG = fs.readFileSync(path.join(__dirname, 'default-config.lua'), 'utf8');
+const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
+    ["Global WallCheck"] = true, 
+    ["Knock Check"] = true,
 
-// Initialize Supabase Client with proper WebSocket transport for Node.js 20
+    Watermark = {
+        Enabled = true,
+        Username = "Sacrifice.cc", 
+        Color = Color3.fromRGB(12, 12, 255) 
+    },
+
+    ['Silent Aim'] = {
+        ['Enabled'] = true,
+        ['Ignore Fov'] = false,
+        ['One Tap'] = {
+            ['Enabled'] = false,
+        },
+        Tracer = { 
+            Enabled = false,
+            Color = Color3.fromRGB(255, 0, 0),
+            Thickness = 1.5,
+            Transparency = 1.0
+        },
+        ['Legit'] = {
+            ['Enabled'] = false,
+            ['Hit Chance'] = 100,
+            ['FovScalingHitChance'] = true, 
+            ['Anti Curve'] = {['Enabled'] = false, ['Max Angle'] = 15},
+            ['Scaling'] = {['Enabled'] = true, ['Factor'] = 1},
+            ['Anti Aimview'] = {['Enabled'] = true, ['Max Angle'] = 15},
+            ['Checks'] = {
+                ['Max Distance'] = 1222,
+                ['Auto Distance'] = false,
+            },
+        },
+        ['Settings'] = {
+            ['Hit Part'] = 'Closest Point',
+            ['Closest Point'] = {
+                ['Samples'] = 3,
+                ['Diagonal'] = false,
+                ['ShowPoints'] = false,
+                ['PointColor'] = Color3.fromRGB(255, 0, 0)
+            },
+            ['Auto Predictions'] = {
+                ['Enabled'] = false,
+                ['Intensity'] = 1,
+                ['Max Offset'] = 15,
+            },
+            ['Predictions'] = {
+                ['Enabled'] = false,
+                ['Values'] = {
+                    ['x'] = 0,
+                    ['y'] = 0,
+                    ['z'] = 0,
+                },
+            },
+            ['Fov'] = {
+                ['Enabled'] = true,
+                ['Visible'] = false,
+                ['Radius'] = 350,
+                ['Thickness'] = 1.5,
+                ['Transparency'] = 1,
+                ['Filled'] = false,
+                ['Color'] = Color3.fromRGB(0, 17, 255),
+                ['Override'] = {
+                    ['Enabled'] = false,
+                    ['GetExternalRadius'] = nil,
+                }
+            },
+        },
+        TargetPriority = "Fov", 
+        Mode = "Target", 
+        TargetKeybind = "C", 
+        LockedTarget = nil, 
+        TargetModeForceHit = true, -- Set to true so Target Mode completely ignores the FOV circle once locked
+        Smoothing = 0.1, 
+        HitChance = 100,
+    },
+
+    ['Trigger Bot'] = {
+        ['Enabled'] = true,
+        ['Keybind'] = "T",
+        ['TargetKeybind'] = "H",
+        ['LockedTarget'] = nil,
+        ['Interval'] = 0.01,
+        ['Activation'] = 'Toggle',
+        ['Mode'] = 'Fov',
+        ['Knock Check'] = true, 
+        ['Checks'] = {
+            ['Max Distance'] = 3411,
+            ['Auto Distance'] = false,
+        },
+        ['Input'] = {
+            ['Enabled'] = true,
+            ['Start'] = 0,
+            ['End'] = 0,
+        },
+        ['Settings'] = {
+            ['Hits'] = 'Everything',
+            ['HumanizedReaction'] = true, 
+            ['Auto Predictions'] = {
+                ['Enabled'] = false,
+                ['Intensity'] = 1,
+                ['Max Offset'] = 15,
+            },
+            ['Predictions'] = {
+                ['Enabled'] = false,
+                ['Values'] = {
+                    ['x'] = 0,
+                    ['y'] = 0,
+                    ['z'] = 0,
+                },
+            },
+            ['Fov'] = {['Visible'] = false, ['X'] = 534423, ['Y'] = 6234234, ['Z'] = 23432432235},
+        },
+        Weapons = {
+            '[Double-Barrel SG]',
+            '[Revolver]',
+            '[TacticalShotgun]',
+            '[Tactical Shot shotgun]',
+            '[Glock]'
+        },
+        HitParts = {
+            Type = false, 
+            Parts = {'Head', 'UpperTorso', 'HumanoidRootPart', 'LowerTorso', 'LeftHand', 'RightHand', 'LeftLowerArm', 'RightLowerArm', 'LeftUpperArm', 'RightUpperArm', 'LeftFoot', 'LeftLowerLeg',  'LeftUpperLeg', 'RightLowerLeg', 'RightFoot',  'RightUpperLeg'}
+        },
+        CustomSize = {
+            Enabled = true, 
+            Value = 40 
+        },
+        Active = false 
+    },
+
+    ['Camlock'] = {
+        ['Enabled'] = true,
+        ['Keybind'] = "Q",
+        ['UnlockOnDeath'] = true,
+        ['WallCheck'] = true,
+        ['Snappiness'] = 0.045,
+        ['Ignore Fov'] = true,
+        ['Activation'] = 'Toggle',
+        ['Mode'] = 'Fov',
+        ['Smooth Mode'] = 'Legit', 
+        ['Method'] = 'Camera', 
+        ['Checks'] = {
+            ['Max Distance'] = 1000,
+            ['First Person'] = true,
+            ['Third Person'] = true,
+        },
+        ['Settings'] = {
+            ['Part'] = 'UpperTorso',
+            ['Blend'] = 0.17,
+            ['DynamicHeightCompensation'] = true, 
+            ['VerticalAdjustmentOffset'] = 0,  
+            ['HumanShake'] = {
+                ['Enabled'] = true, 
+                ['Amount'] = 0.55
+            },
+            ['Fov'] = {['Visible'] = false, ['X'] = 432423418, ['Y'] = 12342342348, ['Z'] = 12342343248},
+            ['Auto Predictions'] = {
+                ['Enabled'] = false,
+                ['Intensity'] = 1,
+                ['Max Offset'] = 15,
+            },
+            ['Predictions'] = {
+                ['Enabled'] = true,
+                ['Values'] = {
+                    ['x'] = 0.125,
+                    ['y'] = 0.225,
+                    ['z'] = 0.125,
+                },
+            },
+        },
+        Shake = {
+            Enabled = true,
+            ShakeMode = "WholeBody", 
+            X = 0.5, 
+            Y = 0.5,  
+        },
+        Robotic = {
+            Enabled = false,              
+            ModeSwitchKeybind = "G",     
+            FlickKeybind = "F",          
+            Overshoot = {
+                Enabled = true,
+                Multiplier = 1.35,       
+                DecaySpeed = 12,         
+            },
+            Jitter = {
+                Enabled = true,
+                Frequency = 45,          
+                AmplitudeX = 2.2,        
+                AmplitudeY = 2.2,        
+            },
+            Spasm = {
+                Enabled = true,
+                Chance = 0.08,           
+                MaxSpikeDistance = 5.5,  
+            }
+        }
+    },
+
+    Orbit = {
+        Enabled = false,
+        Keybind = "Z",
+        TargetPlayer = nil, 
+        Distance = 10,
+        Height = 0, 
+        Speed = 6150, 
+        AutoKill = true,
+        AutoReload = true,
+        ReloadAmmoCount = 0 
+    },
+
+    SpreadMod = {
+        Enabled = false,
+        Amount = 70
+    },
+
+    ["Hitbox Expander"] = {
+        Enabled = false,
+        Size = 110,
+        Visualize = false,
+        ["Ignore Dead"] = false 
+    },
+
+    ["Weapon Mods"] = {
+        Traced = { 
+           RapidFire = false, RapidFireDelay = 0.01 
+        },
+        ["Delay Changer"] = {
+            Enabled = true,
+            GlobalDelay = 0.08, 
+            Weapons = { 
+                ["[Revolver]"] = { Enabled = false, Delay = 0.05 },
+                ["[Glock]"] = { Enabled = false, Delay = 0.05 },
+                ["[Double-Barrel SG]"] = { Enabled = false, Delay = 0.05 },
+                ["[Tactical Shotgun]"] = { Enabled = false, Delay = 0.05 },
+            }
+        },
+        RageMode = {
+            Enabled = false, 
+            FireInterval = 0.00001
+        }
+    },
+
+    Visuals = {
+        ["Color Modifications"] = { Enabled = false, Vibrancy = 0.45, Contrast = 0, Brightness = 0 },
+        Sky = { Enabled = true, Color = "Black" },
+        ESP = { 
+            Enabled = true, 
+            Keybind = "B", 
+            Size = 11, 
+            DefaultColor = Color3.fromRGB(255, 255, 255), 
+            TargetColor = Color3.fromRGB(255, 0, 0),
+            SilentAimTargetColor = Color3.fromRGB(255, 0, 255)
+        },
+    },
+    
+    ["Speed Modifications"] = { 
+        Options = { Enabled = true, DefaultSpeed = 35, Method = "WalkSpeed", Keybind = "V" } 
+    },
+
+    ["Jump Modifications"] = {
+        Enabled = false,
+        JumpPower = 60,
+        Keybind = "H"
+    },
+
+    ["Damage Modifications"] = {
+        Overrider = { Enabled = false, Damage = 200 }, 
+        Amplifier = { Enabled = false, Multiplier = 35 } 
+    },
+
+    Spiderman = { 
+        Enabled = true, 
+        ["Jump Boost"] = 80,["Jump Delay"] = 0, 
+        Keybind = "J" 
+    },
+
+    ["Wallbang"] = {
+        Enabled = true
+    },
+
+    AntiStomp = {
+        Enabled = false
+    },
+    
+    ["Panic Ground"] = {
+        Enabled = true,
+        Keybind = "P"
+    },
+
+    Noclip = {
+        Enabled = false,
+        Keybind = "N",
+        Active = false
+    },
+    
+    ["Skin Changer"] = { 
+        Enabled = false, 
+        Skins = {
+            ["[Revolver]"] = "Inferno",
+            ["[Glock]"] = "Blue Dagger",
+            ["[Knife]"] = "Golden Age Tanto",
+            ["[Double Barrel SG]"] = "Galaxy"
+        } 
+    },
+    
+    ["Avatar Modifications"] = {
+        Enabled = false,
+        Headless = false,
+        Korblox = false,
+        Morph = {
+            Enabled = true,
+            TargetId = 3577180836
+        }
+    },
+
+    Hitsounds = {
+        Enabled = false,
+        Sound = "", 
+        Volume = 3 
+    },
+
+    ["Infinite Range"] = {
+        enabled = true,
+        range = 1000,    
+        bypasspos = 10 
+    }
+}`;
+
+// Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  try {
-    // For Node.js 20, we need to provide the WebSocket transport
-    supabase = createClient(supabaseUrl, supabaseKey, {
-      realtime: {
-        params: {
-          eventsPerSecond: 10
-        }
-      },
-      // This fixes the WebSocket error by not using realtime features that require native WebSocket
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true
-      }
-    });
-    console.log("Supabase client initialized successfully");
-  } catch (err) {
-    console.warn("WARNING: Supabase initialization failed:", err.message);
-    supabase = null;
-  }
-} else {
-  console.warn("WARNING: Missing SUPABASE_URL or SUPABASE_KEY in .env");
+if (!supabaseUrl || !supabaseKey) {
+  console.warn("WARNING: Missing SUPABASE_URL or SUPABASE_KEY in .env. Existing local accounts can log in, but registration/license checks are disabled.");
 }
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey, {
+  realtime: {
+    transport: WebSocket
+  }
+}) : null;
 
 // Middleware
 app.set('trust proxy', 1);
@@ -65,6 +373,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Helmet security headers (configured to allow inline scripts for simplicity in dev, but can be hardened)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -78,10 +387,10 @@ app.use(helmet({
   }
 }));
 
-// Rate Limiter
+// Rate Limiter to prevent brute force / DoS
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => req.originalUrl.startsWith('/api/connections'),
@@ -89,8 +398,8 @@ const limiter = rateLimit({
 });
 
 const connectionsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 1000,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Allow frequent connection polling without hitting the auth/config limiter
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many connection status requests. Please wait a moment.' }
@@ -99,7 +408,7 @@ const connectionsLimiter = rateLimit({
 app.use('/api/connections', connectionsLimiter);
 app.use('/api/', limiter);
 
-// Database helper functions
+// Database helper functions (Safe read/writes to database.json)
 function readLocalDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
@@ -122,34 +431,7 @@ function writeLocalDB(data) {
   }
 }
 
-/** Only fill in missing configs — never overwrite saved user configs on boot. */
-function isValidSacrificeConfig(config) {
-  return typeof config === 'string'
-    && config.trim().length > 0
-    && /getgenv\(\)\.[Ss]acrifice\s*=\s*\{/i.test(config);
-}
-
-function migrateAllUserConfigsToDefault() {
-  const db = readLocalDB();
-  let migrated = 0;
-
-  for (const user of db) {
-    const hasConfig = user.config && typeof user.config === 'string' && user.config.trim();
-    const looksLikeSacrifice = hasConfig && /getgenv\(\)\.[Ss]acrifice\s*=/i.test(user.config);
-    if (looksLikeSacrifice) continue;
-
-    user.config = DEFAULT_LUA_CONFIG;
-    migrated += 1;
-    console.log(`[Migration] Initialized empty config for user: ${user.username}`);
-  }
-
-  if (migrated > 0) {
-    writeLocalDB(db);
-    console.log(`[Migration] ${migrated} account(s) received default-config.lua`);
-  }
-}
-
-// Auth middleware
+// Auth middleware to secure APIs
 function authenticateToken(req, res, next) {
   const token = req.cookies.token;
   if (!token) {
@@ -161,6 +443,7 @@ function authenticateToken(req, res, next) {
       return res.status(403).json({ error: 'Session expired. Please log in again.' });
     }
 
+    // Check if user is banned in local DB
     const db = readLocalDB();
     const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
     if (!localUser) {
@@ -175,66 +458,20 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// WebSocket Connections
+// --- WebSocket Connections for Roblox Executors ---
+// Stores mapping of user -> set of WS connections
 const clientConnections = new Map();
 const getConnectionKey = (username) => String(username || '').trim().toLowerCase();
 
-wss.on('connection', (ws, request, username) => {
-  console.log(`[WS] Client connected for user: ${username}`);
-
-  ws.isAlive = true;
-  ws.username = username;
-
-  ws.on('pong', () => {
-    ws.isAlive = true;
-  });
-
-  const connectionKey = getConnectionKey(username);
-  if (!clientConnections.has(connectionKey)) {
-    clientConnections.set(connectionKey, new Set());
-  }
-  clientConnections.get(connectionKey).add(ws);
-
-  // Don't send config automatically on connection
-  // Config will be sent when user clicks "Activate Config"
-  console.log(`[WS] Client connected for user: ${username}`);
-
-  ws.on('close', (code, reason) => {
-    console.log(`[WS] Client disconnected for user: ${username}, code: ${code}`);
-    const userConns = clientConnections.get(connectionKey);
-    if (userConns) {
-      userConns.delete(ws);
-      if (userConns.size === 0) {
-        clientConnections.delete(connectionKey);
-      }
-    }
-  });
-
-  ws.on('error', (err) => {
-    console.error(`[WS] Error for ${username}:`, err.message);
-  });
-});
-
-const heartbeatInterval = setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) {
-      console.log(`[WS] Terminating inactive connection for ${ws.username || 'unknown'}`);
-      return ws.terminate();
-    }
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 15000);
-
-wss.on('close', () => {
-  clearInterval(heartbeatInterval);
-});
-
+// HTTP upgrade handler for WebSocket
 server.on('upgrade', (request, socket, head) => {
-  console.log(`[WS Upgrade] ${request.url}`);
+  console.log(`\n[WS Upgrade Attempt] URL: ${request.url}`);
+  console.log(`[WS Upgrade Attempt] IP: ${socket.remoteAddress}`);
+  console.log(`[WS Upgrade Attempt] Headers:`, JSON.stringify(request.headers));
 
   let token = null;
 
+  // Try parsing cookies first
   const cookieHeader = request.headers.cookie || '';
   const cookies = cookieHeader.split(';').reduce((acc, c) => {
     const parts = c.split('=');
@@ -245,24 +482,40 @@ server.on('upgrade', (request, socket, head) => {
   }, {});
   token = cookies.token;
 
-  if (!token && request.headers.authorization) {
-    const bearer = request.headers.authorization.match(/^Bearer\s+(.+)$/i);
-    if (bearer) {
-      token = bearer[1].trim();
-      console.log('[WS] Token from Authorization header');
-    }
-  }
-
+  // Fallback to checking the token in the URL query string manually
   if (!token && request.url) {
     const match = request.url.match(/[?&]token=([^&]+)/);
     if (match) {
-      token = decodeURIComponent(match[1]);
-      console.log('[WS] Token from URL parameter');
+      token = match[1];
     }
   }
 
+  // If token is missing, check if this is a local request and we can bypass validation for debugging
   if (!token) {
-    console.warn(`[WS] No token provided`);
+    const isLocal = socket.remoteAddress === '127.0.0.1' || socket.remoteAddress === '::1' || socket.remoteAddress === '::ffff:127.0.0.1';
+
+    if (isLocal) {
+      const db = readLocalDB();
+      let fallbackUsername = null;
+      if (db.length === 1) {
+        fallbackUsername = db[0].username;
+      } else if (db.length > 1 && global.lastActiveUsername) {
+        fallbackUsername = global.lastActiveUsername;
+      }
+
+      if (fallbackUsername) {
+        const localUser = db.find(u => u.username.toLowerCase() === fallbackUsername.toLowerCase());
+        if (localUser && !localUser.banned) {
+          console.log(`[WS Upgrade Bypass] Localhost connection accepted without token for user: ${localUser.username}`);
+          wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit('connection', ws, request, localUser.username);
+          });
+          return;
+        }
+      }
+    }
+
+    console.warn(`[WS Upgrade Rejected] Reason: Missing token / no local fallback user.`);
     socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
     socket.destroy();
     return;
@@ -270,33 +523,70 @@ server.on('upgrade', (request, socket, head) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.warn(`[WS] Invalid token: ${err.message}`);
+      console.warn(`[WS Upgrade Rejected] Reason: JWT verification failed.`);
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
       socket.destroy();
       return;
     }
 
+    // Verify user is not banned
     const db = readLocalDB();
     const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
     if (!localUser || localUser.banned) {
-      console.warn(`[WS] User banned or not found: ${user.username}`);
-      socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      console.warn(`[WS Upgrade Rejected] Reason: User banned or not found.`);
+      socket.write('HTTP/1.1 403 Forbidden - Banned\r\n\r\n');
       socket.destroy();
       return;
     }
 
-    console.log(`[WS] Authenticated user: ${localUser.username}`);
+    console.log(`[WS Upgrade Approved] Upgrading socket for user: ${localUser.username}`);
+    // Upgrade connection
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request, localUser.username);
     });
   });
 });
 
+wss.on('connection', (ws, request, username) => {
+  console.log(`WebSocket client connected for user: ${username}`);
+
+  const connectionKey = getConnectionKey(username);
+  if (!clientConnections.has(connectionKey)) {
+    clientConnections.set(connectionKey, new Set());
+  }
+  clientConnections.get(connectionKey).add(ws);
+
+  const db = readLocalDB();
+  const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'init',
+      config: localUser.config
+    }));
+    console.log(`Sent initial config to ${username}`);
+  }
+
+  ws.on('close', () => {
+    console.log(`WebSocket client disconnected for user: ${username}`);
+    const userConns = clientConnections.get(connectionKey);
+    if (userConns) {
+      userConns.delete(ws);
+      if (userConns.size === 0) {
+        clientConnections.delete(connectionKey);
+      }
+    }
+  });
+
+  ws.on('error', (err) => {
+    console.error(`WebSocket error for ${username}:`, err);
+  });
+});
+// Broadcast config updates to a specific user's connected executors
 function broadcastConfigUpdate(username, config) {
   const connectionKey = getConnectionKey(username);
   const userConns = clientConnections.get(connectionKey);
   let count = 0;
-
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
     userConns.forEach((ws) => {
@@ -305,30 +595,36 @@ function broadcastConfigUpdate(username, config) {
           ws.send(payload);
           count++;
         } catch (err) {
-          console.error(`[WS] Failed to send update: ${err.message}`);
+          console.error(`Failed to send config update to ${username}:`, err);
         }
+      } else {
+        userConns.delete(ws);
       }
     });
+    if (userConns.size === 0) {
+      clientConnections.delete(connectionKey);
+    }
   }
-
-  console.log(`[Activation] ${username}: sent to ${count} connection(s)`);
+  console.log(`[Activation] ${username}: sent config update to ${count} open WebSocket connection(s).`);
   return count;
 }
 
-// API Endpoints
+// --- API Endpoints ---
 
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
     app: 'sacrifice-config-hub',
+    build: 'activate-route-v3-push-endpoint',
+    activateRoute: 'POST /api/config/activate',
+    pushRoute: 'POST /api/config/push',
+    activateHandler: 'shared activation handler registered for activate and push',
     timestamp: new Date().toISOString()
   });
 });
 
 function activateConfigHandler(req, res) {
-  console.log(`[Activation] ${req.user.username}`);
-  console.log(`[DEBUG] Config received, length:`, req.body.config ? req.body.config.length : 'undefined');
-  console.log(`[DEBUG] Config preview:`, req.body.config ? req.body.config.substring(0, 200) : 'undefined');
+  console.log(`[Activation Route Hit] ${req.user.username}`);
 
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
@@ -338,17 +634,11 @@ function activateConfigHandler(req, res) {
     return res.status(500).json({ error: 'User profile not found.' });
   }
 
-  const configToActivate = (typeof req.body.config === 'string' && req.body.config.trim())
-    ? req.body.config.trim()
-    : user.config;
-  if (!isValidSacrificeConfig(configToActivate)) {
+  const configToActivate = typeof req.body.config === 'string' ? req.body.config : user.config;
+  const match = configToActivate.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
+  if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
   }
-
-  // Persist before broadcast so reconnecting clients always get the latest table
-  user.config = configToActivate;
-  user.lastActivatedConfig = configToActivate;
-  writeLocalDB(db);
 
   const activeConnectionsCount = broadcastConfigUpdate(user.username, configToActivate);
 
@@ -356,8 +646,17 @@ function activateConfigHandler(req, res) {
     success: true,
     message: 'Configuration activated and transmitted!',
     connectedClients: activeConnectionsCount,
-    websocketUser: user.username,
-    configBytes: configToActivate.length
+    websocketUser: user.username
+  });
+
+  setImmediate(() => {
+    try {
+      user.config = configToActivate;
+      user.lastActivatedConfig = configToActivate;
+      writeLocalDB(db);
+    } catch (err) {
+      console.error(`Failed to persist activated config for ${user.username}:`, err);
+    }
   });
 }
 
@@ -365,82 +664,13 @@ app.all('/api/config/activate', authenticateToken, (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Use POST /api/config/activate' });
   }
+
   return activateConfigHandler(req, res);
 });
 
 app.post('/api/config/push', authenticateToken, activateConfigHandler);
 
-// Get user info from Supabase
-app.get('/api/user/:username', authenticateToken, async (req, res) => {
-  const { username } = req.params;
-
-  if (req.user.username.toLowerCase() !== username.toLowerCase()) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  if (!supabase) {
-    return res.json({
-      discordId: 'Not linked',
-      duration: 'Lifetime'
-    });
-  }
-
-  try {
-    const db = readLocalDB();
-    const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
-
-    if (!user || !user.license) {
-      return res.json({
-        discordId: 'Not linked',
-        duration: 'Lifetime'
-      });
-    }
-
-    const { data: licenseData, error } = await supabase
-      .from('licenses')
-      .select('discordid, duration')
-      .eq('license', user.license)
-      .single();
-
-    if (error || !licenseData) {
-      return res.json({
-        discordId: 'Not linked',
-        duration: 'Lifetime'
-      });
-    }
-
-    res.json({
-      discordId: licenseData.discordid || 'Not linked',
-      duration: licenseData.duration || 'Lifetime'
-    });
-  } catch (err) {
-    console.error('Error fetching user data:', err);
-    res.json({
-      discordId: 'Not linked',
-      duration: 'Lifetime'
-    });
-  }
-});
-
-// Get user's license key
-app.get('/api/user/:username/license', authenticateToken, async (req, res) => {
-  const { username } = req.params;
-
-  if (req.user.username.toLowerCase() !== username.toLowerCase()) {
-    return res.status(403).json({ error: 'Access denied' });
-  }
-
-  const db = readLocalDB();
-  const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
-
-  if (!user || !user.license) {
-    return res.json({ licenseKey: null });
-  }
-
-  res.json({ licenseKey: user.license });
-});
-
-// Registration
+// Registration (Sign Up)
 app.post('/api/auth/register', async (req, res) => {
   const { username, password, licenseKey } = req.body;
 
@@ -455,12 +685,14 @@ app.post('/api/auth/register', async (req, res) => {
 
   const db = readLocalDB();
 
+  // Check if username is already registered
   const userExists = db.some(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
   if (userExists) {
     return res.status(400).json({ error: 'Username is already taken.' });
   }
 
-  const licenseUsedLocally = db.some(u => u.license && u.license.toLowerCase() === licenseKey.toLowerCase().trim());
+  // Check if license is already used by a local account
+  const licenseUsedLocally = db.some(u => u.license.toLowerCase() === licenseKey.toLowerCase().trim());
   if (licenseUsedLocally) {
     return res.status(400).json({ error: 'License key has already been used!' });
   }
@@ -470,6 +702,8 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(503).json({ error: 'Registration is unavailable because Supabase is not configured on this server.' });
     }
 
+    // 1. Check if license exists in Supabase
+    // Using select() with eq() filter
     const { data: licenseData, error: fetchErr } = await supabase
       .from('licenses')
       .select('*')
@@ -480,18 +714,22 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'License Invalid!' });
     }
 
+    // 2. Check if key is blacklisted
     if (licenseData.blacklisted) {
       return res.status(400).json({ error: 'License Invalid! Key is blacklisted.' });
     }
 
+    // 3. Check if has discord id
     if (!licenseData.discordid) {
       return res.status(400).json({ error: "Your key hasn't been claimed yet!" });
     }
 
+    // 4. Check if cloudclaimed is true
     if (licenseData.cloudclaimed === true) {
       return res.status(400).json({ error: 'This key has already been used!' });
     }
 
+    // 5. Update cloudclaimed to true in Supabase
     const { error: updateErr } = await supabase
       .from('licenses')
       .update({ cloudclaimed: true })
@@ -502,14 +740,16 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(500).json({ error: 'Failed to update license claim status. Try again later.' });
     }
 
+    // 6. Securely hash password
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // 7. Save user in local DB
     const newUser = {
       username: trimmedUsername,
       password: hashedPassword,
       license: licenseKey.trim(),
-      config: DEFAULT_LUA_CONFIG,
+      config: DEFAULT_LUA_CONFIG, // Default Sacrifice Lua table configuration
       banned: false,
       createdAt: new Date().toISOString()
     };
@@ -525,7 +765,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login
+// Sign In (Login)
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -542,48 +782,52 @@ app.post('/api/auth/login', async (req, res) => {
 
   const user = db[userIndex];
 
+  // If user is already marked banned locally
   if (user.banned) {
     return res.status(403).json({ error: 'Your account is banned!' });
   }
 
+  // Verify password
   const passwordMatch = await bcrypt.compare(password, user.password);
   if (!passwordMatch) {
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
 
   try {
-    if (supabase && user.license) {
+    // Fetch license status from Supabase to verify blacklist status upon logging in
+    if (supabase) {
       const { data: licenseData, error: fetchErr } = await supabase
         .from('licenses')
         .select('*')
         .eq('license', user.license)
         .single();
 
-      if (!fetchErr && licenseData && licenseData.blacklisted) {
-        user.banned = true;
-        writeLocalDB(db);
-        return res.status(403).json({ error: 'Your account has been instantly banned due to license blacklisting!' });
+      if (!fetchErr && licenseData) {
+        if (licenseData.blacklisted) {
+          // BAN account instantly
+          user.banned = true;
+          writeLocalDB(db);
+          return res.status(403).json({ error: 'Your account has been instantly banned due to license blacklisting!' });
+        }
       }
     }
   } catch (err) {
-    console.warn("Failed to check blacklist:", err);
+    console.warn("Failed to check blacklist in Supabase during login. Continuing with caution.", err);
   }
 
+  // Generate JWT token
   const token = jwt.sign(
     { username: user.username },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '7d' } // Secure 7 day session duration
   );
 
-  const cookieSecure = process.env.COOKIE_SECURE === 'true'
-    || process.env.NODE_ENV === 'production'
-    || Boolean(process.env.RAILWAY_ENVIRONMENT);
-
+  // Set HTTP-Only Cookie for session persistence
   res.cookie('token', token, {
     httpOnly: true,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    secure: process.env.NODE_ENV === 'production', // secure in production (HTTPS)
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
 
   global.lastActiveUsername = user.username;
@@ -594,14 +838,15 @@ app.post('/api/auth/login', async (req, res) => {
   });
 });
 
-// Logout
+// Sign Out (Logout)
 app.post('/api/auth/logout', (req, res) => {
   res.clearCookie('token');
   return res.json({ success: true, message: 'Logged out successfully!' });
 });
 
-// Check Session
+// Check Session Status
 app.get('/api/auth/session', authenticateToken, (req, res) => {
+  // Extract token from cookie to return back to frontend
   const token = req.cookies.token;
   global.lastActiveUsername = req.user.username;
   return res.json({
@@ -623,14 +868,16 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Configuration string is required.' });
   }
 
-  if (!isValidSacrificeConfig(config)) {
+  // Validate that config contains the Sacrifice wrapper (allows comments/whitespace and case-insensitive 'sacrifice')
+  const match = config.match(/^\s*(?:--[^\n]*\n\s*)*getgenv\(\)\.[Ss]acrifice\s*=\s*\{[\s\S]*\}\s*$/);
+  if (!match) {
     return res.status(400).json({ error: 'Must be a Sacrifice configuration (e.g., getgenv().Sacrifice = { ... })' });
   }
 
   const db = readLocalDB();
   const userIndex = db.findIndex(u => u.username.toLowerCase() === req.user.username.toLowerCase());
   if (userIndex !== -1) {
-    db[userIndex].config = config.trim();
+    db[userIndex].config = config;
     writeLocalDB(db);
     return res.json({ success: true, message: 'Configuration saved successfully!' });
   }
@@ -638,13 +885,14 @@ app.post('/api/config/save', authenticateToken, (req, res) => {
   return res.status(500).json({ error: 'Failed to find user profile.' });
 });
 
-// Connection count
+// Return connection count for frontend
 app.get('/api/connections', authenticateToken, (req, res) => {
   const userConns = clientConnections.get(getConnectionKey(req.user.username));
   return res.json({ count: userConns ? userConns.size : 0 });
 });
 
-// Serve static files
+// Serve static frontend files from 'public' directory after API routes.
+// Disable caching for this local GUI so browser refreshes always pick up edits.
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
   lastModified: false,
@@ -655,15 +903,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// Error handler
+// Error-handling fallback
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong on the server!' });
 });
 
-migrateAllUserConfigsToDefault();
-
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sacrifice config hub running on http://localhost:${PORT}`);
-  console.log(`WebSocket server ready`);
+  console.log(`Sacrifice config hub is running on http://localhost:${PORT}`);
 });
