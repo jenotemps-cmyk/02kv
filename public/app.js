@@ -1101,11 +1101,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function generateScript(token) {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = window.location.host;
-    const serverUrl = `${wsProtocol}//${wsHost}/?token=${encodeURIComponent(token)}`;
+    const serverUrl = `${wsProtocol}//${wsHost}?token=${token}`;
     const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
 
     return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
--- Web loader only. Put sacrifice-cloud-apply-patch.lua in your Roblox SOURCE, not in this file.
 print("Sacrifice loader starting...")
 
 local SERVER_URL = "${serverUrl}"
@@ -1116,166 +1115,60 @@ local RETRY_DELAY = 2
 
 local HttpService = game:GetService("HttpService")
 
-local function deepMerge(dst, src)
+local function cloneTable(src)
+    local out = {}
     for k, v in pairs(src) do
-        if type(v) == "table" and type(dst[k]) == "table" then
-            deepMerge(dst[k], v)
-        else
-            dst[k] = v
-        end
+        out[k] = (type(v) == "table") and cloneTable(v) or v
     end
+    return out
 end
 
-local function tblBool(t, ...)
-    if type(t) ~= "table" then return nil end
-    for i = 1, select("#", ...) do
-        local key = select(i, ...)
-        if t[key] ~= nil then return t[key] == true end
-    end
-    return nil
-end
-
-local function setTblBool(t, val, ...)
-    if type(t) ~= "table" then return end
-    for i = 1, select("#", ...) do
-        t[select(i, ...)] = val
-    end
-end
-
-local function parseCloudConfigTable(configText)
-    if type(configText) ~= "string" or configText == "" then
-        return nil, "empty config"
-    end
-    local trimmed = configText:gsub("^%s+", ""):gsub("%s+$", "")
-    local body = trimmed:match("^getgenv%(%).[Ss]acrifice%s*=%s*(.+)$") or trimmed
-    local fn, err = loadstring("return " .. body)
-    if not fn then
-        return nil, err
-    end
-    local ok, cloudTable = pcall(fn)
-    if not ok or type(cloudTable) ~= "table" then
-        return nil, cloudTable
-    end
-    return cloudTable, nil
-end
-
-local function syncAfterCloudMerge(root)
-    if type(root) ~= "table" then return end
-    local sa = root["Silent Aim"]
-    if type(sa) == "table" then
-        local modern = sa.Settings and sa.Settings.Fov
-        if type(modern) == "table" then
-            local vis = tblBool(modern, "Visible", 'Visible')
-            if vis == nil and type(sa.FOV) == "table" then
-                vis = tblBool(sa.FOV, "Visible", 'Visible')
-            end
-            if vis ~= nil then
-                setTblBool(modern, vis, "Visible", 'Visible')
-                if vis then
-                    modern.Enabled = true
-                    modern['Enabled'] = true
-                end
-                if type(sa.FOV) ~= "table" then
-                    sa.FOV = {
-                        Visible = vis,
-                        Radius = modern.Radius or modern['Radius'] or 350,
-                        Color = modern.Color or modern['Color'] or Color3.fromRGB(0, 17, 255),
-                        Mode = "Circle",
-                    }
-                else
-                    setTblBool(sa.FOV, vis, "Visible", 'Visible')
-                    local radius = modern.Radius or modern['Radius']
-                    if radius ~= nil then sa.FOV.Radius = radius end
-                    local color = modern.Color or modern['Color']
-                    if color ~= nil then sa.FOV.Color = color end
-                end
-            end
-        end
-    end
-    local ir = root["Infinite Range"]
-    if type(ir) == "table" then
-        if ir.enabled ~= nil and ir.Enabled == nil then ir.Enabled = ir.enabled end
-        if ir.range ~= nil and ir.Range == nil then ir.Range = ir.range end
-        if ir.bypasspos ~= nil and ir.BypassPos == nil then ir.BypassPos = ir.bypasspos end
+local function syncIntoLiveTable(liveTable, newTable)
+    table.clear(liveTable)
+    for k, v in pairs(newTable) do
+        liveTable[k] = (type(v) == "table") and cloneTable(v) or v
     end
 end
 
 local function applyConfig(configText)
-    if not configText or configText == "" then
-        warn("Config text is empty")
-        return false
+    local liveConfig = getgenv().sacrifice or getgenv().Sacrifice
+    local fn, err = loadstring(configText)
+    if not fn then warn("Compile error: "..err) return false end
+    local ok, err = pcall(fn)
+    if not ok then warn("Execute error: "..err) return false end
+    local newConfig = getgenv().sacrifice or getgenv().Sacrifice
+    if type(newConfig) ~= "table" then warn("No config table found") return false end
+
+    if type(liveConfig) == "table" and liveConfig ~= newConfig then
+        syncIntoLiveTable(liveConfig, newConfig)
+        getgenv().sacrifice = liveConfig
+        getgenv().Sacrifice = liveConfig
+    else
+        getgenv().sacrifice = newConfig
+        getgenv().Sacrifice = newConfig
     end
 
-    local sourceApply = getgenv().Sacrifice_ApplyCloudConfig
-    if type(sourceApply) == "function" and sourceApply ~= applyConfig then
-        local ok, err = sourceApply(configText)
-        if ok then
-            syncAfterCloudMerge(getgenv().Sacrifice)
-            if getgenv().Sacrifice_RefreshLocals then
-                pcall(getgenv().Sacrifice_RefreshLocals)
-            end
-            getgenv().Sacrifice_CloudConfigReceived = true
-            return true
-        end
-        warn("[Loader] Source Sacrifice_ApplyCloudConfig failed: " .. tostring(err))
-    end
-
-    local cloudTable, err = parseCloudConfigTable(configText)
-    if not cloudTable then
-        warn("[Loader] Failed to parse config: " .. tostring(err))
-        return false
-    end
-
-    if not getgenv().Sacrifice then
-        warn("[Loader] Sacrifice table missing - run source first")
-        return false
-    end
-
-    deepMerge(getgenv().Sacrifice, cloudTable)
-    syncAfterCloudMerge(getgenv().Sacrifice)
-    getgenv().sacrifice = getgenv().Sacrifice
-    local tb = getgenv().sacrifice["Trigger Bot"]
-    if tb then getgenv().sacrifice.Triggerbot = tb end
-    if getgenv().Sacrifice_RefreshLocals then
-        pcall(getgenv().Sacrifice_RefreshLocals)
-    end
-    getgenv().Sacrifice_CloudConfigReceived = true
-    print("[Loader] Cloud config merged")
     return true
 end
 
 local function connectWebSocket(url, retryCount)
     retryCount = retryCount or 0
-    if type(WebSocket) ~= "table" or type(WebSocket.connect) ~= "function" then
-        warn("[Loader] This executor has no WebSocket.connect — use Synapse, Solara, Wave, etc.")
-        return nil
-    end
-    print("[Loader] Connecting to " .. url:gsub("token=[^&]+", "token=***"))
-    local success, result = pcall(function() return WebSocket.connect(url) end)
-    local isSocket = success and result and (
-        type(result) == "userdata"
-        or (type(result) == "table" and (result.OnMessage or result.Send or result.SendAsync))
-    )
-    if isSocket then
-        print("[Loader] WebSocket connected")
-        return result
-    end
-    local errMsg = success and tostring(result) or tostring(result)
-    warn("[Loader] WebSocket connect failed: " .. errMsg)
-    if retryCount < MAX_RETRIES then
-        print("[Loader] Retrying in "..RETRY_DELAY.."s... ("..(retryCount+1).."/"..MAX_RETRIES..")")
+    local success, socket = pcall(function() return WebSocket.connect(url) end)
+    if success and socket then
+        print("WebSocket connected")
+        return socket
+    elseif retryCount < MAX_RETRIES then
+        print("WebSocket failed, retrying in "..RETRY_DELAY.."s... ("..(retryCount+1).."/"..MAX_RETRIES..")")
         wait(RETRY_DELAY)
         return connectWebSocket(url, retryCount + 1)
+    else
+        warn("WebSocket failed after "..MAX_RETRIES.." attempts")
+        return nil
     end
-    warn("[Loader] WebSocket failed after "..MAX_RETRIES.." attempts. Log in again, Get Script, re-run.")
-    return nil
 end
 
 local socket = connectWebSocket(SERVER_URL)
-if not socket then
-    warn("[Loader] Could not establish WebSocket. Check: logged in, fresh Get Script, hub URL matches site, executor supports WebSocket.")
-    return
-end
+if not socket then warn("Could not establish WebSocket connection") return end
 
 local loaded = false
 
@@ -1290,8 +1183,14 @@ socket.OnMessage:Connect(function(msg)
     if msg == "ping" then return end
     local ok, data = pcall(function() return HttpService:JSONDecode(msg) end)
     if not ok or (data.type ~= "init" and data.type ~= "update") then return end
-    if not loaded then
+    
+    local isFirstLoad = not loaded
+    if isFirstLoad then
+        -- 1. Apply config first to register getgenv().Sacrifice before engine boot
+        applyConfig(data.config)
         loaded = true
+        
+        -- 2. Download and run the metatable-wrapped engine script
         local srcSuccess, src = pcall(function() return game:HttpGet(SOURCE_URL) end)
         if srcSuccess and src then
             local fn, err = loadstring(src)
@@ -1307,24 +1206,18 @@ socket.OnMessage:Connect(function(msg)
             warn("Failed to download source")
             return
         end
+    else
+        -- Normal updates skip source loading and just synchronize configuration tables
+        applyConfig(data.config)
     end
-    if applyConfig(data.config) then
-        print("Cloud config applied")
-        if loaded then
-            task.delay(0.35, function()
-                pcall(function()
-                    if applyConfig(data.config) then
-                        print("Cloud config reapplied")
-                    end
-                end)
-            end)
-        end
-    end
+
+    print("Cloud config applied")
 end)
 
 socket.OnClose:Connect(function() warn("WebSocket closed") end)
 
 print("Sacrifice ready - waiting for config...")`;
+  }
   }
 
   // ============================================================
