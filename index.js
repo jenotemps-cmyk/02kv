@@ -21,13 +21,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_jwt_tokens';
 const DB_FILE = path.join(__dirname, 'database.json');
 
 // Default configuration (Sacrifice Lua table)
-const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
+const DEFAULT_LUA_CONFIG = `getgenv().sacrifice = {
     ["Global WallCheck"] = true, 
     ["Knock Check"] = true,
 
     Watermark = {
         Enabled = true,
-        Username = "Sacrifice.cc", 
+        Username = "eso", 
         Color = Color3.fromRGB(12, 12, 255) 
     },
 
@@ -56,7 +56,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
             },
         },
         ['Settings'] = {
-            ['Hit Part'] = 'Closest Point',
+            ['Hit Part'] = 'Head',
             ['Closest Point'] = {
                 ['Samples'] = 3,
                 ['Diagonal'] = false,
@@ -91,10 +91,10 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
             },
         },
         TargetPriority = "Fov", 
-        Mode = "Target", 
+        Mode = "Hybrid", 
         TargetKeybind = "C", 
         LockedTarget = nil, 
-        TargetModeForceHit = true, -- Set to true so Target Mode completely ignores the FOV circle once locked
+        TargetModeForceHit = false,
         Smoothing = 0.1, 
         HitChance = 100,
     },
@@ -102,8 +102,6 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
     ['Trigger Bot'] = {
         ['Enabled'] = true,
         ['Keybind'] = "T",
-        ['TargetKeybind'] = "H",
-        ['LockedTarget'] = nil,
         ['Interval'] = 0.01,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -157,8 +155,8 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         ['Enabled'] = true,
         ['Keybind'] = "Q",
         ['UnlockOnDeath'] = true,
-        ['WallCheck'] = true,
-        ['Snappiness'] = 0.045,
+        ['WallCheck'] = false,
+        ['Snappiness'] = 0.015,
         ['Ignore Fov'] = true,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -230,7 +228,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Height = 0, 
         Speed = 6150, 
         AutoKill = true,
-        AutoReload = true,
+        AutoReload = false,
         ReloadAmmoCount = 0 
     },
 
@@ -248,7 +246,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
 
     ["Weapon Mods"] = {
         Traced = { 
-           RapidFire = false, RapidFireDelay = 0.01 
+           RapidFire = true, RapidFireDelay = 0.15
         },
         ["Delay Changer"] = {
             Enabled = true,
@@ -280,7 +278,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
     },
     
     ["Speed Modifications"] = { 
-        Options = { Enabled = true, DefaultSpeed = 35, Method = "WalkSpeed", Keybind = "V" } 
+        Options = { Enabled = true, DefaultSpeed = 835, Method = "WalkSpeed", Keybind = "V" } 
     },
 
     ["Jump Modifications"] = {
@@ -298,6 +296,12 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Enabled = true, 
         ["Jump Boost"] = 80,["Jump Delay"] = 0, 
         Keybind = "J" 
+    },
+    
+    ["Infinite Range"] = { 
+        enabled = true, 
+        range = 2000, 
+        bypasspos = 65 
     },
 
     ["Wallbang"] = {
@@ -343,12 +347,6 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Enabled = false,
         Sound = "", 
         Volume = 3 
-    },
-
-    ["Infinite Range"] = {
-        enabled = true,
-        range = 1000,    
-        bypasspos = 10 
     }
 }`;
 
@@ -699,7 +697,20 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     if (!supabase) {
-      return res.status(503).json({ error: 'Registration is unavailable because Supabase is not configured on this server.' });
+      console.warn("Supabase is not configured. Registering user locally for development/offline mode.");
+      const salt = await bcrypt.genSalt(12);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const newUser = {
+        username: trimmedUsername,
+        password: hashedPassword,
+        license: licenseKey.trim(),
+        config: DEFAULT_LUA_CONFIG,
+        banned: false,
+        createdAt: new Date().toISOString()
+      };
+      db.push(newUser);
+      writeLocalDB(db);
+      return res.json({ success: true, message: 'Account registered locally (offline mode)!' });
     }
 
     // 1. Check if license exists in Supabase
@@ -825,7 +836,7 @@ app.post('/api/auth/login', async (req, res) => {
   // Set HTTP-Only Cookie for session persistence
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // secure in production (HTTPS)
+    secure: process.env.NODE_ENV === 'production' && req.hostname !== 'localhost' && req.hostname !== '127.0.0.1', // secure in production (HTTPS)
     sameSite: 'lax', // 'lax' allows WS upgrades from same-site navigations; executors use token in URL instead
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
@@ -853,6 +864,44 @@ app.get('/api/auth/session', authenticateToken, (req, res) => {
     authenticated: true,
     username: req.user.username,
     token: token
+  });
+});
+
+// Fetch User Data (Discord details, license keys) from Supabase or Local DB fallback
+app.get('/api/user/:username', authenticateToken, async (req, res) => {
+  const username = req.params.username;
+  const db = readLocalDB();
+  const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user) {
+    return res.status(404).json({ error: 'User profile not found.' });
+  }
+
+  let discordId = 'Not linked';
+  let keyDuration = 'Lifetime (Local)';
+
+  if (supabase) {
+    try {
+      const { data: licenseData, error: fetchErr } = await supabase
+        .from('licenses')
+        .select('*')
+        .eq('license', user.license)
+        .single();
+
+      if (!fetchErr && licenseData) {
+        discordId = licenseData.discordid || 'Not linked';
+        keyDuration = licenseData.duration || 'Unlimited';
+      }
+    } catch (err) {
+      console.warn("Failed to query user license details from Supabase during profile fetch:", err);
+    }
+  }
+
+  return res.json({
+    username: user.username,
+    license: user.license,
+    discordId: discordId,
+    keyDuration: keyDuration
   });
 });
 
@@ -912,105 +961,96 @@ app.get('/api/script', authenticateToken, (req, res) => {
   // The main script source URL (configurable via env or default)
   const scriptUrl = process.env.SCRIPT_URL || 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
 
-  const loaderScript = `-- Sacrifice Loader | User: ${username}
--- Auto-generated loader - paste this into your executor
+  const loaderScript = `-- Sacrifice Loader | ${username}
+-- Paste into your executor
 
-local WEBSOCKET_URL = "${wsUrl}"
-local SCRIPT_URL = "${scriptUrl}"
+local WS_URL = "${wsUrl}"
+local SRC_URL = "${scriptUrl}"
 
--- Connect to WebSocket, receive config, then execute the main script
-local function main()
-    local WebSocket = syn and syn.websocket or (WebSocket and WebSocket) or (http and http.websocket)
-    
-    if not WebSocket then
+local function notify(title, text, dur)
+    pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Sacrifice",
-            Text = "WebSocket not supported by your executor!",
-            Duration = 5
+            Title = title, Text = text, Duration = dur or 3
         })
-        return
-    end
-
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Sacrifice",
-        Text = "Connecting to config server...",
-        Duration = 3
-    })
-
-    local success, ws = pcall(function()
-        if syn and syn.websocket then
-            return syn.websocket.connect(WEBSOCKET_URL)
-        elseif WebSocket.connect then
-            return WebSocket.connect(WEBSOCKET_URL)
-        else
-            return WebSocket(WEBSOCKET_URL)
-        end
     end)
+end
 
-    if not success or not ws then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Sacrifice",
-            Text = "Failed to connect to config server!",
-            Duration = 5
-        })
+local function main()
+    -- Set up WebSocket
+    local wsFunc = syn and syn.websocket and syn.websocket.connect
+        or (WebSocket and WebSocket.connect)
+        or (http and http.websocket and function(url)
+            return http.websocket(url)
+        end)
+
+    if not wsFunc then
+        notify("Sacrifice", "No WebSocket support")
         return
     end
 
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Sacrifice",
-        Text = "Connected! Waiting for config...",
-        Duration = 3
-    })
+    notify("Sacrifice", "Connecting...")
 
-    -- Listen for config messages from WebSocket
-    ws.OnMessage:Connect(function(message)
-        local data = game:GetService("HttpService"):JSONDecode(message)
+    local ok, ws = pcall(wsFunc, WS_URL)
+    if not ok or not ws then
+        notify("Sacrifice", "Connection failed")
+        return
+    end
+
+    -- Track config state
+    local gotConfig = false
+
+    -- Attach OnMessage RIGHT AWAY before any yields
+    ws.OnMessage:Connect(function(msg)
+        local ok2, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(msg)
+        end)
+        if not ok2 or not data then return end
+
         if data.type == "init" or data.type == "update" then
-            -- Apply the config from the website
-            local configSuccess, configErr = pcall(function()
-                loadstring(data.config)()
-            end)
-            if configSuccess then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Sacrifice",
-                    Text = "Config applied from web!",
-                    Duration = 3
-                })
-            else
-                warn("[Sacrifice] Failed to load config: " .. tostring(configErr))
+            if data.config and type(data.config) == "string" then
+                gotConfig = true
+                local cfgOk, cfgErr = pcall(function() loadstring(data.config)() end)
+                if cfgOk then
+                    notify("Sacrifice", "Config loaded")
+                else
+                    warn("[Sacrifice] Config error: " .. tostring(cfgErr))
+                end
             end
         end
     end)
 
     ws.OnClose:Connect(function()
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Sacrifice",
-            Text = "WebSocket connection closed",
-            Duration = 3
-        })
+        notify("Sacrifice", "WS closed")
     end)
 
-    -- Wait briefly for initial config to arrive
-    task.wait(2)
-
-    -- Now load and execute the main script source
-    -- The config (getgenv().sacrifice) is already set from the WebSocket
-    local scriptSuccess, scriptErr = pcall(function()
-        loadstring(game:HttpGet(SCRIPT_URL))()
-    end)
-
-    if not scriptSuccess then
-        warn("[Sacrifice] Failed to execute main script: " .. tostring(scriptErr))
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Sacrifice",
-            Text = "Failed to execute script!",
-            Duration = 5
-        })
+    -- Wait for config to arrive (up to 8 sec)
+    local t = tick()
+    while not gotConfig and (tick() - t) < 8 do
+        task.wait(0.25)
     end
 
-    -- Keep WebSocket alive for live config updates from the website
+    if not gotConfig then
+        notify("Sacrifice", "No config received, loading script anyway")
+    end
+
+    -- Execute the main script
+    local srcOk, srcErr = pcall(function()
+        loadstring(game:HttpGet(SRC_URL))()
+    end)
+
+    if not srcOk then
+        local errMsg = tostring(srcErr)
+        -- Truncate long errors for the notification
+        if #errMsg > 80 then
+            errMsg = errMsg:sub(1, 80) .. "..."
+        end
+        warn("[Sacrifice] Script error: " .. tostring(srcErr))
+        notify("Sacrifice", "Script error: " .. errMsg, 7)
+    end
+
+    -- Keep WS alive for live config updates
     spawn(function()
-        while ws and ws.CloseCode == nil do
+        while true do
             task.wait(1)
         end
     end)
