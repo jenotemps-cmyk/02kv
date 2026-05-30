@@ -699,7 +699,20 @@ app.post('/api/auth/register', async (req, res) => {
 
   try {
     if (!supabase) {
-      return res.status(503).json({ error: 'Registration is unavailable because Supabase is not configured on this server.' });
+      console.warn("Supabase is not configured. Registering user locally for development/offline mode.");
+      const salt = await bcrypt.genSalt(12);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const newUser = {
+        username: trimmedUsername,
+        password: hashedPassword,
+        license: licenseKey.trim(),
+        config: DEFAULT_LUA_CONFIG,
+        banned: false,
+        createdAt: new Date().toISOString()
+      };
+      db.push(newUser);
+      writeLocalDB(db);
+      return res.json({ success: true, message: 'Account registered locally (offline mode)!' });
     }
 
     // 1. Check if license exists in Supabase
@@ -825,7 +838,7 @@ app.post('/api/auth/login', async (req, res) => {
   // Set HTTP-Only Cookie for session persistence
   res.cookie('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // secure in production (HTTPS)
+    secure: process.env.NODE_ENV === 'production' && req.hostname !== 'localhost' && req.hostname !== '127.0.0.1', // secure in production (HTTPS)
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
@@ -853,6 +866,44 @@ app.get('/api/auth/session', authenticateToken, (req, res) => {
     authenticated: true,
     username: req.user.username,
     token: token
+  });
+});
+
+// Fetch User Data (Discord details, license keys) from Supabase or Local DB fallback
+app.get('/api/user/:username', authenticateToken, async (req, res) => {
+  const username = req.params.username;
+  const db = readLocalDB();
+  const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user) {
+    return res.status(404).json({ error: 'User profile not found.' });
+  }
+
+  let discordId = 'Not linked';
+  let keyDuration = 'Lifetime (Local)';
+
+  if (supabase) {
+    try {
+      const { data: licenseData, error: fetchErr } = await supabase
+        .from('licenses')
+        .select('*')
+        .eq('license', user.license)
+        .single();
+
+      if (!fetchErr && licenseData) {
+        discordId = licenseData.discordid || 'Not linked';
+        keyDuration = licenseData.duration || 'Unlimited';
+      }
+    } catch (err) {
+      console.warn("Failed to query user license details from Supabase during profile fetch:", err);
+    }
+  }
+
+  return res.json({
+    username: user.username,
+    license: user.license,
+    discordId: discordId,
+    keyDuration: keyDuration
   });
 });
 
