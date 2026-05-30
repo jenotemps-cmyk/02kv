@@ -900,61 +900,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Get Script Button & Modal ---
     function generateLoaderScript(token) {
-      const serverUrl = `wss://getsacrifice.bonto.run?token=${token}`;
+      // Build WebSocket URL based on current host so it works locally and in production
+      const currentHost = window.location.host;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const serverUrl = `${wsProtocol}://${currentHost}/?token=${token}`;
       const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
       return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
 -- Do not share this script, it contains your personal session token.
 
 print("Sacrifice loader started")
+
 local SERVER_URL = "${serverUrl}"
 local SOURCE_URL = "${sourceUrl}"
 local HttpService = game:GetService("HttpService")
 
-local function deepMerge(target, source)
-    if typeof(target) ~= "table" or typeof(source) ~= "table" then
-        return source
-    end
-    for key, value in pairs(source) do
-        if typeof(value) == "table" and typeof(target[key]) == "table" then
-            deepMerge(target[key], value)
+-- Deep merge utility to merge cloud config into existing config
+local function deepMerge(dst, src)
+    for k, v in pairs(src) do
+        if type(v) == "table" and type(dst[k]) == "table" then
+            deepMerge(dst[k], v)
         else
-            target[key] = value
+            dst[k] = v
         end
     end
-    return target
 end
 
+-- Apply cloud config by merging it into the existing Sacrifice table
 local function applyConfig(configText)
-    local beforeLower = getgenv().sacrifice
-    local beforeUpper = getgenv().Sacrifice
+    if getgenv().Sacrifice_ApplyCloudConfig and getgenv().Sacrifice_ApplyCloudConfig ~= applyConfig then
+        return getgenv().Sacrifice_ApplyCloudConfig(configText)
+    end
+    if not configText then
+        warn("Config text is nil")
+        return false
+    end
 
     local configFunc, compileErr = loadstring(configText)
     if not configFunc then
-        return false, "Failed to compile config: "..tostring(compileErr)
+        warn("Failed to compile config:", compileErr)
+        return false
     end
 
     local runOk, runErr = pcall(configFunc)
     if not runOk then
-        return false, "Failed to execute config: "..tostring(runErr)
+        warn("Failed to execute config:", runErr)
+        return false
     end
 
-    local newConfig = getgenv().sacrifice or getgenv().Sacrifice
-    if typeof(newConfig) ~= "table" then
-        return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
-    end
+    -- Merge cloud config into existing Sacrifice table
+    if getgenv().Sacrifice then
+        local cloudConfig = getgenv().sacrifice or getgenv().Sacrifice
+        if type(cloudConfig) == "table" then
+            deepMerge(getgenv().Sacrifice, cloudConfig)
+            getgenv().sacrifice = getgenv().Sacrifice
+        end
 
-    local liveConfig = beforeLower or beforeUpper
-    if typeof(liveConfig) == "table" then
-        deepMerge(liveConfig, newConfig)
+        -- Trigger refresh if the source script has this function
+        if getgenv().Sacrifice_RefreshLocals then
+            getgenv().Sacrifice_RefreshLocals()
+        end
+
+        print("Cloud config applied successfully")
+        return true
     else
-        liveConfig = newConfig
+        warn("Sacrifice table not initialized yet")
+        return false
     end
-
-    getgenv().sacrifice = liveConfig
-    getgenv().Sacrifice = liveConfig
-    return true
 end
 
+-- Load the source script first, then connect WebSocket
+print("Loading source script...")
+local sourceOk, sourceErr = pcall(function()
+    local source = game:HttpGet(SOURCE_URL)
+    print("Source downloaded (" .. #source .. " bytes)")
+    loadstring(source)()
+end)
+
+if not sourceOk then
+    warn("Source script error:", sourceErr)
+    return
+end
+
+print("Source script loaded with defaults")
+
+getgenv().Sacrifice_ApplyCloudConfig = applyConfig
+
+-- Connect to WebSocket for config updates
 local socket
 local ok, err = pcall(function()
     socket = WebSocket.connect(SERVER_URL)
@@ -966,12 +997,9 @@ if not ok or not socket then
 end
 
 print("Connected to Sacrifice WebSocket")
-
-local hasLoadedSource = false
+print("Click 'Activate Config' on the website to apply your settings")
 
 socket.OnMessage:Connect(function(msg)
-    print("Received packet")
-
     local decodedOk, data = pcall(function()
         return HttpService:JSONDecode(msg)
     end)
@@ -981,39 +1009,9 @@ socket.OnMessage:Connect(function(msg)
         return
     end
 
-    if data.type ~= "init" and data.type ~= "update" then
-        return
-    end
-
-    print("Lua configuration text received")
-
-    local configOk, configErr = applyConfig(data.config)
-    if not configOk then
-        warn(configErr)
-        return
-    end
-
-    print("Website config applied")
-
-    if hasLoadedSource then
-        print("Live config updated")
-        return
-    end
-
-    hasLoadedSource = true
-    print("Initializing main source script...")
-
-    local sourceOk, sourceErr = pcall(function()
-        local source = game:HttpGet(SOURCE_URL)
-        print("Source downloaded, length:", #source)
-        loadstring(source)()
-    end)
-
-    if sourceOk then
-        print("Source script executed successfully")
-    else
-        warn("Source script error: "..tostring(sourceErr))
-        hasLoadedSource = false
+    if data.type == "update" or data.type == "init" then
+        print("Received config update from website")
+        applyConfig(data.config)
     end
 end)
 
