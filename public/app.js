@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // --- Mouse-following glow effect ---
+  const mouseGlow = document.getElementById('mouse-glow');
+  if (mouseGlow) {
+    document.addEventListener('mousemove', (e) => {
+      mouseGlow.style.left = e.clientX + 'px';
+      mouseGlow.style.top = e.clientY + 'px';
+    });
+  }
+
   // Navigation elements
   const authContainer = document.getElementById('auth-container');
   const dashboardContainer = document.getElementById('dashboard-container');
@@ -150,8 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Branding Logo Management ---
-  function setLogoSource(img, source) {
-    function setLogoSource(img, source, forceText = false) {
+  function setLogoSource(img, source, forceText = false) {
       if (!img) return;
 
       const fallbackText = img.nextElementSibling;
@@ -891,181 +899,128 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Get Script Button & Modal ---
-    function generateObfuscatedScript(token) {
-      // Gentle obfuscation: base64 encode strings, use string.char for some parts
+    function generateLoaderScript(token) {
       const serverUrl = `wss://getsacrifice.bonto.run?token=${token}`;
       const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
-      function generateUnobfuscatedScript(userKey) {
-        const script = `print("Sacrifice loader started")
-local SERVER_URL = "wss://getsacrifice.bonto.run?token=${userKey}"
-local SOURCE_URL = "https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c"
+      return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
+-- Do not share this script, it contains your personal session token.
+
+print("Sacrifice loader started")
+local SERVER_URL = "${serverUrl}"
+local SOURCE_URL = "${sourceUrl}"
 local HttpService = game:GetService("HttpService")
 
-    // Base64 encode the URLs
-    const b64Server = btoa(serverUrl);
-    const b64Source = btoa(sourceUrl);
 local function deepMerge(target, source)
     if typeof(target) ~= "table" or typeof(source) ~= "table" then
         return source
     end
-
-    // Build the obfuscated script - readable enough but not plain text
-    const script = `-- Sacrifice Loader | Generated ${ new Date().toLocaleString() }
-        --Do not share this script, it contains your personal session token.
-        for key, value in pairs(source) do
-          if typeof (value) == "table" and typeof (target[key]) == "table" then
-        deepMerge(target[key], value)
+    for key, value in pairs(source) do
+        if typeof(value) == "table" and typeof(target[key]) == "table" then
+            deepMerge(target[key], value)
         else
-        target[key] = value
+            target[key] = value
         end
-        end
-
-local _0x = {}
-        _0x._d = function (s) local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/' return (s: gsub('.', function (x) local r, f = '', (b: find(x) - 1) for i = 6, 1, -1 do r = r..(f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0') end return r end)..'0000'): gsub('%d%d%d%d%d%d%d%d', function (x) if (#x~=8) then return '' end local c = 0 for i = 1, 8 do c = c + (x: sub(i, i) == '1' and 2 ^ (8 - i) or 0) end return string.char(c) end) end
-_0x._s = _0x._d("${b64Server}")
-_0x._u = _0x._d("${b64Source}")
-return target
+    end
+    return target
 end
 
-local _svc = game: GetService(string.char(72, 116, 116, 112, 83, 101, 114, 118, 105, 99, 101))
 local function applyConfig(configText)
     local beforeLower = getgenv().sacrifice
     local beforeUpper = getgenv().Sacrifice
 
-print("Sacrifice loader started")
     local configFunc, compileErr = loadstring(configText)
-if not configFunc then
-return false, "Failed to compile config: "..tostring(compileErr)
-end
+    if not configFunc then
+        return false, "Failed to compile config: "..tostring(compileErr)
+    end
 
-local function _merge(t, s)
-if typeof (t) ~= "table" or typeof (s) ~= "table" then return s end
-for k, v in pairs(s) do
-  if typeof (v) == "table" and typeof (t[k]) == "table" then _merge(t[k], v)
-        else t[k] = v end
     local runOk, runErr = pcall(configFunc)
-if not runOk then
-return false, "Failed to execute config: "..tostring(runErr)
-end
-return t
+    if not runOk then
+        return false, "Failed to execute config: "..tostring(runErr)
+    end
 
     local newConfig = getgenv().sacrifice or getgenv().Sacrifice
-if typeof (newConfig) ~= "table" then
-return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
-end
+    if typeof(newConfig) ~= "table" then
+        return false, "Website config did not create getgenv().sacrifice or getgenv().Sacrifice"
+    end
 
     local liveConfig = beforeLower or beforeUpper
-if typeof (liveConfig) == "table" then
-deepMerge(liveConfig, newConfig)
+    if typeof(liveConfig) == "table" then
+        deepMerge(liveConfig, newConfig)
     else
-liveConfig = newConfig
+        liveConfig = newConfig
+    end
+
+    getgenv().sacrifice = liveConfig
+    getgenv().Sacrifice = liveConfig
+    return true
 end
 
-local function _apply(ct)
-    local _bL = getgenv().sacrifice
-    local _bU = getgenv().Sacrifice
-    local fn, ce = loadstring(ct)
-if not fn then return false, "Failed to compile config: "..tostring(ce) end
-    local ok, re = pcall(fn)
-if not ok then return false, "Failed to execute config: "..tostring(re) end
-    local nc = getgenv().sacrifice or getgenv().Sacrifice
-if typeof (nc) ~= "table" then return false, "Config did not create getgenv().sacrifice" end
-    local lc = _bL or _bU
-if typeof (lc) == "table" then _merge(lc, nc) else lc = nc end
-getgenv().sacrifice = lc
-getgenv().Sacrifice = lc
-getgenv().sacrifice = liveConfig
-getgenv().Sacrifice = liveConfig
-return true
-end
-
-local _ws
-local _ok, _er = pcall(function () _ws = WebSocket.connect(_0x._s) end)
-if not _ok or not _ws then warn("WebSocket failed:", _er) return end
 local socket
-local ok, err = pcall(function ()
+local ok, err = pcall(function()
     socket = WebSocket.connect(SERVER_URL)
 end)
 
 if not ok or not socket then
-warn("WebSocket failed:", err)
-return
+    warn("WebSocket failed:", err)
+    return
 end
 
 print("Connected to Sacrifice WebSocket")
-local _loaded = false
 
 local hasLoadedSource = false
 
-socket.OnMessage: Connect(function (msg)
+socket.OnMessage:Connect(function(msg)
     print("Received packet")
 
-    local decodedOk, data = pcall(function ()
-        return HttpService: JSONDecode(msg)
+    local decodedOk, data = pcall(function()
+        return HttpService:JSONDecode(msg)
     end)
 
-if not decodedOk then
-warn("Could not decode packet")
-return
-end
+    if not decodedOk then
+        warn("Could not decode packet")
+        return
+    end
 
-if data.type ~= "init" and data.type ~= "update" then
-return
-end
+    if data.type ~= "init" and data.type ~= "update" then
+        return
+    end
 
-print("Lua configuration text received")
+    print("Lua configuration text received")
 
     local configOk, configErr = applyConfig(data.config)
-if not configOk then
-warn(configErr)
-return
-end
+    if not configOk then
+        warn(configErr)
+        return
+    end
 
-print("Website config applied")
+    print("Website config applied")
 
-if hasLoadedSource then
-print("Live config updated")
-return
-end
+    if hasLoadedSource then
+        print("Live config updated")
+        return
+    end
 
-hasLoadedSource = true
-print("Initializing main source script...")
+    hasLoadedSource = true
+    print("Initializing main source script...")
 
-_ws.OnMessage: Connect(function (msg)
-    local dok, data = pcall(function () return _svc: JSONDecode(msg) end)
-if not dok then return end
-if data.type ~= "init" and data.type ~= "update" then return end
-    local cok, cer = _apply(data.config)
-if not cok then warn(cer) return end
-print("Config applied")
-if _loaded then return end
-_loaded = true
-    local sok, ser = pcall(function ()
-        local src = game: HttpGet(_0x._u)
-        loadstring(src)()
-    local sourceOk, sourceErr = pcall(function ()
-        local source = game: HttpGet(SOURCE_URL)
+    local sourceOk, sourceErr = pcall(function()
+        local source = game:HttpGet(SOURCE_URL)
         print("Source downloaded, length:", #source)
         loadstring(source)()
     end)
-    if sok then print("Source executed")
-    else warn("Source error: "..tostring(ser)) _loaded = false end
 
-if sourceOk then
-print("Source script executed successfully")
+    if sourceOk then
+        print("Source script executed successfully")
     else
-warn("Source script error: "..tostring(sourceErr))
-hasLoadedSource = false
-end
+        warn("Source script error: "..tostring(sourceErr))
+        hasLoadedSource = false
+    end
 end)
 
-_ws.OnClose: Connect(function () warn("Sacrifice WebSocket closed") end)`;
 socket.OnClose:Connect(function()
     warn("Sacrifice WebSocket closed")
 end)`;
-
-return script;
-  }
+    }
 
 if (btnGetScript) {
   btnGetScript.addEventListener('click', () => {
@@ -1073,9 +1028,8 @@ if (btnGetScript) {
       showToast('You need to be logged in to get your script', 'error');
       return;
     }
-    const script = generateObfuscatedScript(activeSessionToken);
-    const script = generateUnobfuscatedScript(activeSessionToken);
-    scriptOutput.value = script;
+    const loaderScript = generateLoaderScript(activeSessionToken);
+    scriptOutput.value = loaderScript;
     // Increment execution count
     if (activeUsername) {
       incrementExecutionCount(activeUsername);
