@@ -1,469 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sacrifice | Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-main: #0a0a0c;
-            --bg-card: #111115;
-            --bg-input: #16161c;
-            --border: #22222b;
-            --text-main: #f3f4f6;
-            --text-muted: #8e929b;
-            --accent: #ff2a2a;
-            --accent-dim: #3a1212;
-            --font-sans: 'Plus Jakarta Sans', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            font-family: var(--font-sans);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Top Bar & Brand Logo */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2.5rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .logo-area {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-s {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--accent);
-            position: relative;
-            line-height: 1;
-            /* Human touch: CSS drip effects to resemble clean blood-dripping stylization */
-            text-shadow: 0 2px 4px rgba(255, 42, 42, 0.3);
-        }
-        .logo-s::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 6px;
-            width: 3px;
-            height: 8px;
-            background: var(--accent);
-            border-radius: 0 0 2px 2px;
-            box-shadow: 12px 2px 0 var(--accent);
-        }
-
-        .brand-name {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        /* View Toggle Mode Options (Table vs GUI) */
-        .view-toggle-container {
-            display: flex;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 4px;
-            border-radius: 8px;
-        }
-
-        .view-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .view-btn.active {
-            background: var(--accent-dim);
-            color: var(--accent);
-            border: 1px solid rgba(255, 42, 42, 0.2);
-        }
-
-        /* Grid Layout */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-        }
-
-        @media (max-width: 900px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-        }
-
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1.25rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* View Content Wrappers */
-        .view-panel {
-            display: none;
-        }
-
-        .view-panel.active {
-            display: block;
-        }
-
-        /* Raw Table Textarea view */
-        .raw-textarea {
-            width: 100%;
-            height: 480px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: #a6accd;
-            font-family: var(--font-mono);
-            padding: 1rem;
-            resize: vertical;
-            font-size: 0.85rem;
-            line-height: 1.5;
-        }
-
-        /* Clean Human GUI Layout Switches */
-        .gui-group {
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid rgba(34, 34, 43, 0.5);
-            padding-bottom: 1.5rem;
-        }
-
-        .gui-group:last-child {
-            border: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-
-        .group-header {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .setting-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-        }
-
-        .setting-info .label {
-            font-size: 0.95rem;
-            font-weight: 500;
-            margin-bottom: 2px;
-        }
-
-        .setting-info .desc {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-
-        /* Custom Toggle Switch Component */
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--bg-input);
-            border: 1px solid var(--border);
-            transition: .2s;
-            border-radius: 24px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 3px;
-            bottom: 3px;
-            background-color: var(--text-muted);
-            transition: .2s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--accent-dim);
-            border-color: var(--accent);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-            background-color: var(--accent);
-        }
-
-        /* Input Controls inside GUI */
-        .control-input {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            width: 80px;
-            text-align: center;
-        }
-
-        /* Config Management Sidebar Block */
-        .config-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .btn {
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.2s;
-        }
-
-        .btn:hover {
-            border-color: var(--text-muted);
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            background: #e02222;
-            border-color: #e02222;
-        }
-
-        .config-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perc</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-additions.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <div class="logo-area">
-            <div class="logo-s">S</div>
-            <div class="brand-name">SACRIFICE</div>
-        </div>
+  <!-- AUTH -->
+  <div id="auth-container" class="auth-wrapper">
+    <div class="glass-card auth-card">
+      <div class="logo-area">
+        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none;">P</span>
+      </div>
 
-        <div class="view-toggle-container">
-            <button class="view-btn" onclick="switchView('table')">Table View</button>
-            <button class="view-btn active" onclick="switchView('gui')">GUI View</button>
+      <div id="auth-toast" class="toast-notification hidden"></div>
+      
+      <form id="login-form" class="auth-form">
+        <h2 class="form-title">login</h2>
+        <div class="input-group">
+          <input type="text" id="login-username" required placeholder=" ">
+          <label for="login-username">username</label>
         </div>
+        <div class="input-group">
+          <input type="password" id="login-password" required placeholder=" ">
+          <label for="login-password">password</label>
+        </div>
+        <button type="submit" class="btn btn-primary">sign in</button>
+        <p class="toggle-text">no account? <a href="#" id="to-signup">register</a></p>
+      </form>
+
+      <form id="signup-form" class="auth-form hidden">
+        <h2 class="form-title">register</h2>
+        <div class="input-group">
+          <input type="text" id="reg-username" required placeholder=" ">
+          <label for="reg-username">username</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="reg-password" required placeholder=" ">
+          <label for="reg-password">password</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="reg-license" required placeholder=" ">
+          <label for="reg-license">license key</label>
+        </div>
+        <button type="submit" class="btn btn-primary">register</button>
+        <p class="toggle-text">got an account? <a href="#" id="to-login">sign in</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-container" class="dashboard-wrapper hidden">
+    <header class="navbar">
+      <div class="nav-logo">
+        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none; margin-right: 8px;">P</span>
+      </div>
+      <div class="nav-status">
+        <div class="status-indicator">
+          <span class="status-pulse green" id="status-dot"></span>
+          <span class="status-label" id="status-text">ready</span>
+        </div>
+        <div class="session-info">
+          <span id="user-display">guest</span>
+          <button id="btn-logout" class="btn btn-secondary btn-small">logout</button>
+        </div>
+      </div>
     </header>
 
-    <div class="dashboard-grid">
-        <main class="card">
-            <div class="card-title">
-                <span>Configuration Editor</span>
-                <button class="btn btn-primary" onclick="saveCurrentConfig()">Save Changes</button>
-            </div>
+    <main class="dashboard-content">
+      <!-- Config Editor -->
+      <div class="glass-card editor-card">
+        <div class="card-header">
+          <h2>config</h2>
+          <span id="save-status" class="save-status-text">draft</span>
+        </div>
+        
+        <div id="phrase-display" class="floating-phrase"></div>
+        <div class="editor-container">
+          <textarea id="config-editor" spellcheck="false" placeholder="config..."></textarea>
+        </div>
 
-            <div id="panel-table" class="view-panel">
-                <textarea class="raw-textarea" id="luaConfigText" spellcheck="false"></textarea>
-            </div>
+        <div class="control-footer">
+          <div class="footer-left">
+            <button id="btn-load" class="btn btn-secondary">load</button>
+            <button id="btn-save" class="btn btn-accent">save</button>
+          </div>
+          <button id="btn-activate" class="btn btn-primary btn-large">activate</button>
+        </div>
+      </div>
 
-            <div id="panel-gui" class="view-panel active">
-                
-                <div class="gui-group">
-                    <div class="group-header">Silent Aim Settings</div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Enabled</div>
-                            <div class="desc">Toggle overall calculation assistance systems</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-silent-enabled">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Ignore FOV Boundary</div>
-                            <div class="desc">Disregard radial constraint safety nets</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-silent-ignorefov">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
+      <!-- Get Script -->
+      <div class="glass-card script-card">
+        <div class="card-header">
+          <h2>get script</h2>
+          <span id="script-status" class="save-status-text">ready</span>
+        </div>
+        <p class="script-info-text">generates your loader script. connects to ws, loads your config from the site, then runs the main script.</p>
+        <div class="key-display-area">
+          <span class="key-label">key:</span>
+          <span id="license-key-display" class="key-value">...</span>
+          <button id="btn-copy-key" class="btn btn-secondary btn-small">copy</button>
+        </div>
+        <div class="script-actions">
+          <button id="btn-get-script" class="btn btn-primary btn-large">get script</button>
+          <button id="btn-copy-script" class="btn btn-accent btn-large hidden">copy script</button>
+        </div>
+        <div id="script-preview-area" class="hidden">
+          <textarea id="script-preview" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+    </main>
+  </div>
 
-                <div class="gui-group">
-                    <div class="group-header">Global Check Validations</div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Wall Check Validation</div>
-                            <div class="desc">Verify target visibility through occluding components</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-global-wallcheck">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Knock State Filtering</div>
-                            <div class="desc">Exclude processing down or non-active target models</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-global-knockcheck">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="gui-group">
-                    <div class="group-header">Triggerbot Verification</div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Triggerbot System</div>
-                            <div class="desc">Automatic release execution when vector intersects core bounding boxes</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-trigger-enabled">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="gui-group">
-                    <div class="group-header">Movement Modifiers</div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="label">Wallbang State</div>
-                            <div class="desc">Enables structural matrix execution bypass</div>
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="gui-wallbang-enabled">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-            </div>
-        </main>
-
-        <aside>
-            <div class="card">
-                <div class="card-title">Profile Configurations</div>
-                
-                <div id="configs-list">
-                    <div class="config-item">
-                        <span>default_profile</span>
-                        <button class="btn" style="padding: 4px 10px; font-size: 0.8rem;">Load</button>
-                    </div>
-                </div>
-
-                <div class="config-actions">
-                    <button class="btn" onclick="createNewConfigPrompt()">New Slots</button>
-                    <button class="btn" onclick="refreshSavedConfigsList()">Refresh</button>
-                </div>
-            </div>
-        </aside>
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="settings-modal hidden">
+    <div class="glass-card settings-card">
+      <div class="settings-header">
+        <h3>settings</h3>
+        <button id="btn-close-settings" class="btn-close">&times;</button>
+      </div>
+      <div class="settings-body" style="text-align: left;">
+        <div class="input-group">
+          <input type="text" id="setting-logo-url" placeholder=" ">
+          <label for="setting-logo-url">logo url</label>
+        </div>
+        <p class="settings-hint">or put <code>logo.png</code> in the <code>public</code> folder.</p>
+        <button id="btn-save-settings" class="btn btn-primary" style="width: 100%;">apply</button>
+      </div>
     </div>
-</div>
+  </div>
 
-<script>
-    // Handles fluid switching between Table representation and clean UI controls
-    function switchView(viewType) {
-        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
-
-        if (viewType === 'table') {
-            document.querySelector('.view-btn:nth-child(1)').classList.add('active');
-            document.getElementById('panel-table').classList.add('active');
-        } else {
-            document.querySelector('.view-btn:nth-child(2)').classList.add('active');
-            document.getElementById('panel-gui').classList.add('active');
-        }
-    </div>
-
-    // Basic placeholder implementations to communicate with backend structures 
-    function saveCurrentConfig() {
-        alert("Configuration context packed safely to database serialization registry.");
-    }
-
-    function createNewConfigPrompt() {
-        let name = prompt("Enter registration profile designation profile name:");
-        if(name) alert("Profile profile placeholder generated successfully.");
-    }
-
-    function refreshSavedConfigsList() {
-        console.log("Registry sync ping sent.");
-    }
-</script>
+  <div id="toast-container" class="toast-area"></div>
+  <script src="app.js"></script>
 </body>
 </html>
