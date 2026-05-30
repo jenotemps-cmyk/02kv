@@ -108,6 +108,27 @@
           <button id="btn-activate" class="btn btn-primary btn-glow btn-large">ACTIVATE CONFIG</button>
         </div>
       </div>
+
+      <!-- Get Script Panel -->
+      <div class="glass-card script-card">
+        <div class="card-header">
+          <h2>Get Script</h2>
+          <span id="script-status" class="save-status-text">Ready to generate</span>
+        </div>
+        <p class="script-info-text">Click the button below to generate your personal loader script. It will automatically connect to the WebSocket with your key, load your config, and execute the main script source.</p>
+        <div class="key-display-area">
+          <span class="key-label">Your License Key:</span>
+          <span id="license-key-display" class="key-value">Loading...</span>
+          <button id="btn-copy-key" class="btn btn-secondary btn-small">Copy Key</button>
+        </div>
+        <div class="script-actions">
+          <button id="btn-get-script" class="btn btn-primary btn-glow btn-large">GET SCRIPT</button>
+          <button id="btn-copy-script" class="btn btn-accent btn-large hidden">COPY SCRIPT</button>
+        </div>
+        <div id="script-preview-area" class="hidden">
+          <textarea id="script-preview" spellcheck="false" readonly placeholder="Your loader script will appear here..."></textarea>
+        </div>
+      </div>
     </main>
   </div>
 
