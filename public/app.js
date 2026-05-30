@@ -353,6 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load user's configuration
     loadConfig();
 
+    // Load user info (license key for Get Script)
+    loadUserInfo();
+
     // Start background status updates
     updateConnectionStatus();
     connectionCheckInterval = setInterval(updateConnectionStatus, 15000);
@@ -403,6 +406,102 @@ document.addEventListener('DOMContentLoaded', () => {
   btnLoad.addEventListener('click', loadConfig);
   btnSave.addEventListener('click', saveConfig);
   btnActivate.addEventListener('click', activateConfig);
+
+  // --- Get Script Feature ---
+  const btnGetScript = document.getElementById('btn-get-script');
+  const btnCopyScript = document.getElementById('btn-copy-script');
+  const btnCopyKey = document.getElementById('btn-copy-key');
+  const licenseKeyDisplay = document.getElementById('license-key-display');
+  const scriptPreview = document.getElementById('script-preview');
+  const scriptPreviewArea = document.getElementById('script-preview-area');
+  const scriptStatus = document.getElementById('script-status');
+  let cachedScript = null;
+  let cachedLicenseKey = null;
+
+  // Load user info (license key) when dashboard initializes
+  async function loadUserInfo() {
+    try {
+      const response = await fetch('/api/user-info');
+      if (response.ok) {
+        const result = await response.json();
+        cachedLicenseKey = result.license;
+        if (licenseKeyDisplay) {
+          licenseKeyDisplay.textContent = result.license;
+        }
+      }
+    } catch (err) {
+      if (licenseKeyDisplay) {
+        licenseKeyDisplay.textContent = 'Failed to load';
+      }
+    }
+  }
+
+  // Get the loader script
+  async function getScript() {
+    if (scriptStatus) scriptStatus.textContent = 'Generating...';
+    try {
+      const response = await fetch('/api/script');
+      if (response.ok) {
+        const scriptText = await response.text();
+        cachedScript = scriptText;
+
+        // Show the script preview
+        if (scriptPreview) scriptPreview.value = scriptText;
+        scriptPreviewArea.classList.remove('hidden');
+        btnCopyScript.classList.remove('hidden');
+
+        // Auto-copy to clipboard
+        try {
+          await navigator.clipboard.writeText(scriptText);
+          showToast('Loader script copied to clipboard!', 'success');
+        } catch (e) {
+          showToast('Script generated! Click COPY SCRIPT to copy manually.', 'info');
+        }
+
+        if (scriptStatus) scriptStatus.textContent = 'Script ready & copied!';
+      } else {
+        showToast('Failed to generate loader script', 'error');
+        if (scriptStatus) scriptStatus.textContent = 'Generation failed';
+      }
+    } catch (err) {
+      showToast('Error connecting to server for script', 'error');
+      if (scriptStatus) scriptStatus.textContent = 'Connection error';
+    }
+  }
+
+  if (btnGetScript) {
+    btnGetScript.addEventListener('click', getScript);
+  }
+
+  if (btnCopyScript) {
+    btnCopyScript.addEventListener('click', async () => {
+      if (!cachedScript) {
+        showToast('No script to copy. Click GET SCRIPT first.', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(cachedScript);
+        showToast('Loader script copied to clipboard!', 'success');
+      } catch (e) {
+        showToast('Failed to copy to clipboard', 'error');
+      }
+    });
+  }
+
+  if (btnCopyKey) {
+    btnCopyKey.addEventListener('click', async () => {
+      if (!cachedLicenseKey) {
+        showToast('License key not loaded yet', 'error');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(cachedLicenseKey);
+        showToast('License key copied to clipboard!', 'success');
+      } catch (e) {
+        showToast('Failed to copy to clipboard', 'error');
+      }
+    });
+  }
 
   // --- Luau autocompletion for the config textarea ---
   if (configEditor) {
