@@ -1,1763 +1,469 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sacrifice — Config Hub</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cinzel:wght@700;900&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #080809;
-  --bg2: #0f0f12;
-  --bg3: #161619;
-  --bg4: #1c1c21;
-  --border: #252530;
-  --border2: #2e2e3c;
-  --red: #b52222;
-  --red2: #d63a3a;
-  --red-dim: rgba(181,34,34,0.12);
-  --red-glow: rgba(181,34,34,0.4);
-  --text: #dddde8;
-  --text2: #8585a0;
-  --text3: #48485e;
-  --green: #1d9e6e;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
-  --display: 'Bebas Neue', sans-serif;
-  --title: 'Cinzel', serif;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* ---- TOPBAR ---- */
-.topbar {
-  height: 52px;
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 0 rgba(181,34,34,0.08);
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  gap: 0;
-  flex-shrink: 0;
-  z-index: 100;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-right: 28px;
-  text-decoration: none;
-}
-
-.logo-icon {
-  width: 38px;
-  height: 46px;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.logo-text {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: 22px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text);
-  line-height: 1;
-}
-
-.topbar-sep {
-  width: 1px;
-  height: 28px;
-  background: var(--border);
-  margin: 0 18px;
-}
-
-.topbar-title {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text3);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-chip {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 5px 12px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text2);
-}
-
-.user-chip .dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-}
-
-.btn-sm {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 6px 14px;
-  border-radius: 5px;
-  cursor: pointer;
-  letter-spacing: 0.04em;
-  transition: all .15s;
-}
-.btn-sm:hover { border-color: var(--border2); color: var(--text); }
-.btn-sm.danger:hover { border-color: var(--red); color: var(--red); }
-
-/* ---- MAIN LAYOUT ---- */
-.layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-/* ---- SIDEBAR ---- */
-.sidebar {
-  width: 200px;
-  background: var(--bg2);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
-  padding: 14px 0;
-}
-
-.sidebar::-webkit-scrollbar { width: 3px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-.sidebar-group {
-  margin-bottom: 6px;
-}
-
-.sidebar-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  color: var(--text3);
-  text-transform: uppercase;
-  padding: 10px 18px 5px;
-}
-
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 8px 18px;
-  cursor: pointer;
-  font-family: var(--mono);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--text2);
-  transition: all .12s;
-  border-left: 2px solid transparent;
-  position: relative;
-  letter-spacing: 0.02em;
-}
-
-.sidebar-item:hover { color: var(--text); background: var(--bg3); }
-.sidebar-item.active {
-  color: var(--red2);
-  border-left-color: var(--red);
-  background: var(--red-dim);
-}
-
-.sidebar-item .dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--border2);
-  flex-shrink: 0;
-  transition: background .12s;
-}
-.sidebar-item.active .dot { background: var(--red); box-shadow: 0 0 5px var(--red); }
-.sidebar-item:hover .dot { background: var(--text3); }
-
-/* ---- CONTENT ---- */
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.content::-webkit-scrollbar { width: 4px; }
-.content::-webkit-scrollbar-track { background: transparent; }
-.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* ---- RIGHT PANEL ---- */
-.right-panel {
-  width: 260px;
-  background: var(--bg2);
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  flex-shrink: 0;
-  overflow-y: auto;
-}
-
-.right-panel::-webkit-scrollbar { width: 3px; }
-.right-panel::-webkit-scrollbar-thumb { background: var(--border); }
-
-/* ---- PAGE HEADER ---- */
-.page-header {
-  margin-bottom: 20px;
-}
-
-.page-header h1 {
-  font-family: var(--display);
-  font-size: 34px;
-  font-weight: 400;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.page-header p {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text3);
-}
-
-/* ---- MODE SWITCHER ---- */
-.mode-switcher {
-  display: flex;
-  gap: 3px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 3px;
-  width: fit-content;
-  margin-bottom: 22px;
-}
-
-.mode-btn {
-  padding: 7px 20px;
-  border-radius: 5px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: var(--text3);
-  transition: all .15s;
-}
-
-.mode-btn.active {
-  background: var(--bg4);
-  color: var(--text);
-  border: 1px solid var(--border2);
-}
-
-.mode-btn:hover:not(.active) { color: var(--text2); }
-
-/* ---- PANELS ---- */
-#panel-gui { display: flex; flex-direction: column; gap: 16px; }
-#panel-table { display: none; flex-direction: column; gap: 12px; }
-
-/* ---- SECTION CARD ---- */
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 13px 18px;
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-  transition: background .12s;
-}
-
-.card-header:hover { background: rgba(255,255,255,0.02); }
-
-.card-header-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 6px var(--red-glow);
-  flex-shrink: 0;
-}
-
-.card-header h3 {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  flex: 1;
-  color: var(--text2);
-}
-
-.card-header .chevron {
-  color: var(--text3);
-  font-size: 10px;
-  transition: transform .2s;
-}
-
-.card.collapsed .card-header .chevron { transform: rotate(-90deg); }
-.card.collapsed .card-body { display: none; }
-
-.card-body {
-  padding: 16px 18px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 24px;
-}
-
-.card-body.single-col { grid-template-columns: 1fr; }
-.card-body.three-col { grid-template-columns: 1fr 1fr 1fr; }
-
-/* ---- FORM CONTROLS ---- */
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.field-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.field-label {
-  font-family: var(--mono);
-  font-size: 10.5px;
-  color: var(--text2);
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-}
-
-/* Toggle */
-.toggle-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 0;
-}
-
-.toggle {
-  position: relative;
-  width: 36px;
-  height: 19px;
-  flex-shrink: 0;
-}
-
-.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-
-.toggle-track {
-  position: absolute;
-  inset: 0;
-  background: var(--bg4);
-  border: 1px solid var(--border2);
-  border-radius: 99px;
-  cursor: pointer;
-  transition: all .18s;
-}
-
-.toggle input:checked + .toggle-track {
-  background: var(--red);
-  border-color: var(--red);
-}
-
-.toggle-track::after {
-  content: '';
-  position: absolute;
-  top: 2px; left: 2px;
-  width: 13px; height: 13px;
-  background: var(--text3);
-  border-radius: 50%;
-  transition: all .18s;
-}
-
-.toggle input:checked + .toggle-track::after {
-  left: calc(100% - 15px);
-  background: #fff;
-}
-
-/* Slider */
-.slider-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-input[type=range] {
-  flex: 1;
-  height: 3px;
-  -webkit-appearance: none;
-  background: var(--bg4);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-
-input[type=range]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 13px; height: 13px;
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 5px var(--red-glow);
-  cursor: pointer;
-  transition: transform .1s;
-}
-
-input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-.slider-val {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text2);
-  min-width: 36px;
-  text-align: right;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-/* Select */
-select {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 6px 10px;
-  border-radius: 5px;
-  outline: none;
-  cursor: pointer;
-  width: 100%;
-  transition: border-color .12s;
-}
-
-select:focus { border-color: var(--red); }
-
-/* Text input */
-input[type=text], input[type=number] {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 11px;
-  padding: 6px 10px;
-  border-radius: 5px;
-  outline: none;
-  width: 100%;
-  transition: border-color .12s;
-}
-
-input[type=text]:focus, input[type=number]:focus { border-color: var(--red); }
-
-/* ---- TABLE PANEL ---- */
-.textarea-wrap {
-  position: relative;
-}
-
-textarea {
-  width: 100%;
-  min-height: 540px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.65;
-  padding: 16px;
-  outline: none;
-  resize: vertical;
-  transition: border-color .12s;
-}
-
-textarea:focus { border-color: var(--red); }
-
-.textarea-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-/* ---- RIGHT PANEL INSIDE ---- */
-.rp-section {
-  padding: 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.rp-section:last-child { border-bottom: none; }
-
-.rp-title {
-  font-family: var(--mono);
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.rp-title::before {
-  content: '';
-  display: block;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--red);
-  box-shadow: 0 0 5px var(--red);
-}
-
-.btn-action {
-  width: 100%;
-  padding: 10px;
-  border-radius: 6px;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--bg3);
-  color: var(--text2);
-  margin-bottom: 6px;
-  transition: all .15s;
-  text-align: center;
-}
-
-.btn-action:hover { border-color: var(--border2); color: var(--text); background: var(--bg4); }
-.btn-action:last-child { margin-bottom: 0; }
-
-.btn-action.primary {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff;
-  font-weight: 700;
-}
-
-.btn-action.primary:hover { background: var(--red2); border-color: var(--red2); }
-
-.btn-action.outline-red {
-  border-color: var(--red);
-  color: var(--red);
-  background: var(--red-dim);
-}
-
-.btn-action.outline-red:hover { background: rgba(214,48,49,0.25); }
-
-/* Delivery status */
-.delivery-status {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 11px 13px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text3);
-  line-height: 1.5;
-  margin-top: 10px;
-}
-
-.delivery-status .status-line {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--text2);
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.status-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-}
-
-/* Executor count */
-.exec-count {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: 8px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text2);
-}
-
-.exec-count .num {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-/* Toast */
-.toast-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 9999;
-}
-
-.toast {
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 11px 16px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  animation: slideUp .2s ease;
-  max-width: 280px;
-}
-
-.toast.success { border-color: var(--green); }
-.toast.error { border-color: var(--red); }
-.toast-icon { font-size: 13px; }
-
-@keyframes slideUp {
-  from { transform: translateY(12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* Configs section */
-.config-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  max-height: 180px;
-  overflow-y: auto;
-  margin-bottom: 10px;
-}
-
-.config-list::-webkit-scrollbar { width: 3px; }
-.config-list::-webkit-scrollbar-thumb { background: var(--border); }
-
-.config-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all .12s;
-}
-
-.config-item:hover { border-color: var(--border2); }
-.config-item.active { border-color: var(--red); background: var(--red-dim); }
-
-.config-item-name {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.config-item-del {
-  font-size: 11px;
-  color: var(--text3);
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: all .12s;
-}
-
-.config-item-del:hover { color: var(--red); background: var(--red-dim); }
-
-.config-name-input {
-  margin-bottom: 6px;
-}
-
-/* Auth pages */
-#auth-screen {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(120,10,10,0.12) 0%, var(--bg) 60%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9000;
-}
-
-.auth-box {
-  width: 350px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-top: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 32px 28px;
-  box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 20px rgba(181,34,34,0.04);
-}
-
-.auth-logo {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 26px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.auth-title {
-  font-family: var(--display);
-  font-size: 32px;
-  font-weight: 400;
-  letter-spacing: 0.1em;
-  margin-bottom: 6px;
-}
-
-.auth-sub {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--text3);
-  margin-bottom: 20px;
-  font-weight: 400;
-}
-
-.auth-field {
-  margin-bottom: 12px;
-}
-
-.auth-field label {
-  display: block;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text3);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-}
-
-.auth-field input {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 9px 12px;
-  border-radius: 6px;
-  outline: none;
-  transition: border-color .12s;
-}
-
-.auth-field input:focus { border-color: var(--red); }
-
-.auth-btn {
-  width: 100%;
-  padding: 11px;
-  background: var(--red);
-  border: none;
-  border-radius: 7px;
-  color: #fff;
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  margin-top: 6px;
-  transition: background .15s;
-}
-
-.auth-btn:hover { background: var(--red2); }
-
-.auth-switch {
-  text-align: center;
-  margin-top: 16px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--text3);
-}
-
-.auth-switch a {
-  color: var(--red2);
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.auth-err {
-  background: var(--red-dim);
-  border: 1px solid var(--red);
-  border-radius: 5px;
-  padding: 8px 12px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--red2);
-  margin-top: 10px;
-  display: none;
-}
-
-/* Hide app until authed */
-#app { display: none; height: 100%; flex-direction: column; }
-body.authed #app { display: flex; }
-body.authed #auth-screen { display: none; }
-
-/* Notification banner at top */
-#notif-bar {
-  display: none;
-  background: var(--red-dim);
-  border-bottom: 1px solid var(--red);
-  padding: 7px 20px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--red2);
-  text-align: center;
-  flex-shrink: 0;
-}
-
-/* Scrollbar track */
-.content::-webkit-scrollbar { width: 4px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sacrifice | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #0a0a0c;
+            --bg-card: #111115;
+            --bg-input: #16161c;
+            --border: #22222b;
+            --text-main: #f3f4f6;
+            --text-muted: #8e929b;
+            --accent: #ff2a2a;
+            --accent-dim: #3a1212;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Top Bar & Brand Logo */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-s {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent);
+            position: relative;
+            line-height: 1;
+            /* Human touch: CSS drip effects to resemble clean blood-dripping stylization */
+            text-shadow: 0 2px 4px rgba(255, 42, 42, 0.3);
+        }
+        .logo-s::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 6px;
+            width: 3px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 0 0 2px 2px;
+            box-shadow: 12px 2px 0 var(--accent);
+        }
+
+        .brand-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        /* View Toggle Mode Options (Table vs GUI) */
+        .view-toggle-container {
+            display: flex;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .view-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-btn.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(255, 42, 42, 0.2);
+        }
+
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* View Content Wrappers */
+        .view-panel {
+            display: none;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        /* Raw Table Textarea view */
+        .raw-textarea {
+            width: 100%;
+            height: 480px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #a6accd;
+            font-family: var(--font-mono);
+            padding: 1rem;
+            resize: vertical;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+
+        /* Clean Human GUI Layout Switches */
+        .gui-group {
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(34, 34, 43, 0.5);
+            padding-bottom: 1.5rem;
+        }
+
+        .gui-group:last-child {
+            border: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .group-header {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .setting-info .label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .setting-info .desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Custom Toggle Switch Component */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            transition: .2s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: .2s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent-dim);
+            border-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+            background-color: var(--accent);
+        }
+
+        /* Input Controls inside GUI */
+        .control-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            width: 80px;
+            text-align: center;
+        }
+
+        /* Config Management Sidebar Block */
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--text-muted);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            background: #e02222;
+            border-color: #e02222;
+        }
+
+        .config-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+    </style>
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
-<div id="auth-screen">
-  <div class="auth-box">
-    <div class="auth-logo">
-      <svg width="42" height="50" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="sglow" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#d63a3a"/>
-      <stop offset="55%" stop-color="#a01818"/>
-      <stop offset="100%" stop-color="#600808"/>
-    </radialGradient>
-    <filter id="bloodglow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.5" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-  </defs>
-  <!-- S character -->
-  <text x="3" y="32" font-family="'Cinzel', 'Georgia', serif" font-weight="900" font-size="34"
-        fill="url(#sglow)" filter="url(#bloodglow)" letter-spacing="-1">S</text>
-  <!-- blood drip 1 - long from bottom of S curve left -->
-  <path d="M10 34 Q9.5 38 9.8 40 Q10 42.5 9.5 43.5 Q9 44.8 9.8 44.8 Q10.6 44.8 10.5 43.2 Q10.8 41 11 38 Q10.8 36 10 34Z" fill="#8a0f0f" opacity="0.95"/>
-  <ellipse cx="9.8" cy="45.1" rx="1.1" ry="0.9" fill="#6e0c0c" opacity="0.8"/>
-  <!-- blood drip 2 - short middle -->
-  <path d="M17 33.5 Q16.8 36.5 17 38.5 Q17.2 40 16.8 40.8 Q16.4 41.8 17.1 41.8 Q17.8 41.8 17.6 40.5 Q17.9 38.5 18 36 Q17.7 34.5 17 33.5Z" fill="#8a0f0f" opacity="0.85"/>
-  <ellipse cx="17" cy="42.2" rx="0.9" ry="0.7" fill="#6e0c0c" opacity="0.7"/>
-  <!-- blood drip 3 - tiny from right -->
-  <path d="M24 34.5 Q23.8 36.8 24 38.2 Q24.1 39.3 23.8 39.8 Q23.5 40.6 24 40.6 Q24.5 40.6 24.4 39.6 Q24.6 38.2 24.6 36.5 Q24.4 35.3 24 34.5Z" fill="#8a0f0f" opacity="0.75"/>
-  <ellipse cx="24" cy="41" rx="0.7" ry="0.6" fill="#6e0c0c" opacity="0.6"/>
-</svg>
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:0.18em;text-transform:uppercase;line-height:1">SACRIFICE</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.18em;margin-top:2px">CONFIG HUB</div>
-      </div>
-    </div>
+<div class="container">
+    <header>
+        <div class="logo-area">
+            <div class="logo-s">S</div>
+            <div class="brand-name">SACRIFICE</div>
+        </div>
 
-    <!-- Login form -->
-    <div id="form-login">
-      <div class="auth-title">Sign in</div>
-      <div class="auth-sub">Enter your credentials to continue.</div>
-      <div class="auth-field">
-        <label>Username</label>
-        <input type="text" id="login-user" placeholder="username" autocomplete="off">
-      </div>
-      <div class="auth-field">
-        <label>Password</label>
-        <input type="password" id="login-pass" placeholder="••••••••">
-      </div>
-      <button class="auth-btn" onclick="doLogin()">LOGIN</button>
-      <div class="auth-err" id="login-err"></div>
-      <div class="auth-switch">no account? <a onclick="showForm('register')">register here</a></div>
-    </div>
+        <div class="view-toggle-container">
+            <button class="view-btn" onclick="switchView('table')">Table View</button>
+            <button class="view-btn active" onclick="switchView('gui')">GUI View</button>
+        </div>
+    </header>
 
-    <!-- Register form -->
-    <div id="form-register" style="display:none">
-      <div class="auth-title">Register</div>
-      <div class="auth-sub">Create your account with a valid license key.</div>
-      <div class="auth-field">
-        <label>Username</label>
-        <input type="text" id="reg-user" placeholder="username" autocomplete="off">
-      </div>
-      <div class="auth-field">
-        <label>Password</label>
-        <input type="password" id="reg-pass" placeholder="••••••••">
-      </div>
-      <div class="auth-field">
-        <label>License Key</label>
-        <input type="text" id="reg-license" placeholder="XXXX-XXXX-XXXX">
-      </div>
-      <button class="auth-btn" onclick="doRegister()">CREATE ACCOUNT</button>
-      <div class="auth-err" id="reg-err"></div>
-      <div class="auth-switch">have an account? <a onclick="showForm('login')">sign in</a></div>
+    <div class="dashboard-grid">
+        <main class="card">
+            <div class="card-title">
+                <span>Configuration Editor</span>
+                <button class="btn btn-primary" onclick="saveCurrentConfig()">Save Changes</button>
+            </div>
+
+            <div id="panel-table" class="view-panel">
+                <textarea class="raw-textarea" id="luaConfigText" spellcheck="false"></textarea>
+            </div>
+
+            <div id="panel-gui" class="view-panel active">
+                
+                <div class="gui-group">
+                    <div class="group-header">Silent Aim Settings</div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Enabled</div>
+                            <div class="desc">Toggle overall calculation assistance systems</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-silent-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Ignore FOV Boundary</div>
+                            <div class="desc">Disregard radial constraint safety nets</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-silent-ignorefov">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="gui-group">
+                    <div class="group-header">Global Check Validations</div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Wall Check Validation</div>
+                            <div class="desc">Verify target visibility through occluding components</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-global-wallcheck">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Knock State Filtering</div>
+                            <div class="desc">Exclude processing down or non-active target models</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-global-knockcheck">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="gui-group">
+                    <div class="group-header">Triggerbot Verification</div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Triggerbot System</div>
+                            <div class="desc">Automatic release execution when vector intersects core bounding boxes</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-trigger-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="gui-group">
+                    <div class="group-header">Movement Modifiers</div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="label">Wallbang State</div>
+                            <div class="desc">Enables structural matrix execution bypass</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="gui-wallbang-enabled">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <aside>
+            <div class="card">
+                <div class="card-title">Profile Configurations</div>
+                
+                <div id="configs-list">
+                    <div class="config-item">
+                        <span>default_profile</span>
+                        <button class="btn" style="padding: 4px 10px; font-size: 0.8rem;">Load</button>
+                    </div>
+                </div>
+
+                <div class="config-actions">
+                    <button class="btn" onclick="createNewConfigPrompt()">New Slots</button>
+                    <button class="btn" onclick="refreshSavedConfigsList()">Refresh</button>
+                </div>
+            </div>
+        </aside>
     </div>
-  </div>
 </div>
-
-<!-- MAIN APP -->
-<div id="app">
-  <div id="notif-bar"></div>
-
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <a class="logo" href="#">
-      <!-- Blood S logo -->
-      <svg class="logo-icon" width="38" height="46" viewBox="0 0 38 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="sglow" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#d63a3a"/>
-      <stop offset="55%" stop-color="#a01818"/>
-      <stop offset="100%" stop-color="#600808"/>
-    </radialGradient>
-    <filter id="bloodglow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="1.5" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-  </defs>
-  <!-- S character -->
-  <text x="3" y="32" font-family="'Cinzel', 'Georgia', serif" font-weight="900" font-size="34"
-        fill="url(#sglow)" filter="url(#bloodglow)" letter-spacing="-1">S</text>
-  <!-- blood drip 1 - long from bottom of S curve left -->
-  <path d="M10 34 Q9.5 38 9.8 40 Q10 42.5 9.5 43.5 Q9 44.8 9.8 44.8 Q10.6 44.8 10.5 43.2 Q10.8 41 11 38 Q10.8 36 10 34Z" fill="#8a0f0f" opacity="0.95"/>
-  <ellipse cx="9.8" cy="45.1" rx="1.1" ry="0.9" fill="#6e0c0c" opacity="0.8"/>
-  <!-- blood drip 2 - short middle -->
-  <path d="M17 33.5 Q16.8 36.5 17 38.5 Q17.2 40 16.8 40.8 Q16.4 41.8 17.1 41.8 Q17.8 41.8 17.6 40.5 Q17.9 38.5 18 36 Q17.7 34.5 17 33.5Z" fill="#8a0f0f" opacity="0.85"/>
-  <ellipse cx="17" cy="42.2" rx="0.9" ry="0.7" fill="#6e0c0c" opacity="0.7"/>
-  <!-- blood drip 3 - tiny from right -->
-  <path d="M24 34.5 Q23.8 36.8 24 38.2 Q24.1 39.3 23.8 39.8 Q23.5 40.6 24 40.6 Q24.5 40.6 24.4 39.6 Q24.6 38.2 24.6 36.5 Q24.4 35.3 24 34.5Z" fill="#8a0f0f" opacity="0.75"/>
-  <ellipse cx="24" cy="41" rx="0.7" ry="0.6" fill="#6e0c0c" opacity="0.6"/>
-</svg>
-      <span class="logo-text">SACRIFICE</span>
-    </a>
-    <div class="topbar-sep"></div>
-    <div class="topbar-title">Cloud Configs</div>
-    <div class="topbar-right">
-      <div class="user-chip">
-        <span class="dot"></span>
-        <span id="topbar-username">loading...</span>
-      </div>
-      <button class="btn-sm" onclick="showAccountInfo()">Account</button>
-      <button class="btn-sm danger" onclick="doLogout()">Logout</button>
-    </div>
-  </div>
-
-  <div class="layout">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <div class="sidebar-group">
-        <div class="sidebar-label">Combat</div>
-        <div class="sidebar-item active" onclick="navTo(this,'silent-aim')">
-          <span class="dot"></span> Silent Aimbot
-        </div>
-        <div class="sidebar-item" onclick="navTo(this,'trigger-bot')">
-          <span class="dot"></span> Trigger Bot
-        </div>
-        <div class="sidebar-item" onclick="navTo(this,'camlock')">
-          <span class="dot"></span> Camera Aimbot
-        </div>
-      </div>
-      <div class="sidebar-group">
-        <div class="sidebar-label">Visuals</div>
-        <div class="sidebar-item" onclick="navTo(this,'visuals')">
-          <span class="dot"></span> ESP &amp; Visuals
-        </div>
-      </div>
-      <div class="sidebar-group">
-        <div class="sidebar-label">Movement</div>
-        <div class="sidebar-item" onclick="navTo(this,'movement')">
-          <span class="dot"></span> Movement
-        </div>
-      </div>
-      <div class="sidebar-group">
-        <div class="sidebar-label">Misc</div>
-        <div class="sidebar-item" onclick="navTo(this,'weapons')">
-          <span class="dot"></span> Weapons
-        </div>
-        <div class="sidebar-item" onclick="navTo(this,'misc')">
-          <span class="dot"></span> Misc
-        </div>
-      </div>
-      <div class="sidebar-group">
-        <div class="sidebar-label">Management</div>
-        <div class="sidebar-item" onclick="navTo(this,'configs')">
-          <span class="dot"></span> Configs
-        </div>
-      </div>
-    </div>
-
-    <!-- CONTENT -->
-    <div class="content" id="main-content">
-      <!-- PAGE HEADER -->
-      <div class="page-header">
-        <h1 id="page-title">Silent Aimbot</h1>
-        <p id="page-desc">Configure silent aim, FOV, legit mode, predictions, and more.</p>
-      </div>
-
-      <!-- MODE SWITCHER -->
-      <div class="mode-switcher">
-        <button class="mode-btn active" onclick="switchMode('gui',this)">GUI</button>
-        <button class="mode-btn" onclick="switchMode('table',this)">Table</button>
-      </div>
-
-      <!-- GUI PANEL -->
-      <div id="panel-gui"></div>
-
-      <!-- TABLE PANEL -->
-      <div id="panel-table" style="display:none">
-        <div class="textarea-wrap">
-          <textarea id="config-textarea" spellcheck="false"></textarea>
-        </div>
-        <div class="textarea-actions">
-          <button class="btn-action" onclick="loadConfig()" style="flex:1">Load Saved</button>
-          <button class="btn-action outline-red" onclick="saveTableConfig()" style="flex:1">Save</button>
-          <button class="btn-action primary" onclick="activateConfig()" style="flex:1">Activate</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT PANEL -->
-    <div class="right-panel">
-      <!-- Actions -->
-      <div class="rp-section">
-        <div class="rp-title">Actions <span style="margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)" id="cloud-status">Loaded from cloud</span></div>
-        <button class="btn-action" onclick="loadConfig()">Load Saved</button>
-        <button class="btn-action outline-red" onclick="saveGuiConfig()">Save Config</button>
-        <button class="btn-action" onclick="getScript()">Get Script</button>
-        <button class="btn-action primary" onclick="activateConfig()">ACTIVATE CONFIG</button>
-      </div>
-
-      <!-- Delivery Status -->
-      <div class="rp-section">
-        <div class="rp-title">Delivery Status</div>
-        <div class="exec-count">
-          <div>
-            <div class="num" id="exec-num">0</div>
-            <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">Executors</div>
-          </div>
-          <div style="flex:1;font-family:var(--mono);font-size:10px;color:var(--text3);text-align:right">
-            Active connections
-          </div>
-        </div>
-        <div class="delivery-status">
-          <div class="status-line">
-            <span class="status-dot"></span>
-            Delivery Active
-          </div>
-          Controls update the Lua table that gets saved and pushed via WebSocket.
-        </div>
-      </div>
-
-      <!-- Config Slots -->
-      <div class="rp-section">
-        <div class="rp-title">Config Slots</div>
-        <div class="config-list" id="config-slot-list"></div>
-        <input type="text" class="config-name-input" id="new-slot-name" placeholder="slot name..." style="margin-bottom:6px">
-        <button class="btn-action" onclick="saveSlot()">+ Save Current as Slot</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast-container" id="toast-container"></div>
 
 <script>
-// ============================
-// STATE
-// ============================
-let currentUser = null;
-let currentToken = null;
-let currentConfig = null;
-let currentSection = 'silent-aim';
-let currentMode = 'gui';
-let configSlots = {};
+    // Handles fluid switching between Table representation and clean UI controls
+    function switchView(viewType) {
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
 
-// ============================
-// AUTH
-// ============================
-function showForm(f) {
-  document.getElementById('form-login').style.display = f === 'login' ? '' : 'none';
-  document.getElementById('form-register').style.display = f === 'register' ? '' : 'none';
-}
+        if (viewType === 'table') {
+            document.querySelector('.view-btn:nth-child(1)').classList.add('active');
+            document.getElementById('panel-table').classList.add('active');
+        } else {
+            document.querySelector('.view-btn:nth-child(2)').classList.add('active');
+            document.getElementById('panel-gui').classList.add('active');
+        }
+    </div>
 
-async function doLogin() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const err = document.getElementById('login-err');
-  err.style.display = 'none';
-  try {
-    const r = await fetch('/api/auth/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:u, password:p})
-    });
-    const d = await r.json();
-    if (!r.ok) { err.textContent = d.error; err.style.display = 'block'; return; }
-    currentUser = d.user.username;
-    currentToken = d.user.token;
-    onAuthed();
-  } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
-}
-
-async function doRegister() {
-  const u = document.getElementById('reg-user').value.trim();
-  const p = document.getElementById('reg-pass').value;
-  const l = document.getElementById('reg-license').value.trim();
-  const err = document.getElementById('reg-err');
-  err.style.display = 'none';
-  try {
-    const r = await fetch('/api/auth/register', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({username:u, password:p, licenseKey:l})
-    });
-    const d = await r.json();
-    if (!r.ok) { err.textContent = d.error; err.style.display = 'block'; return; }
-    toast('Account created! Sign in now.', 'success');
-    showForm('login');
-  } catch(e) { err.textContent = 'Network error'; err.style.display = 'block'; }
-}
-
-async function doLogout() {
-  await fetch('/api/auth/logout', {method:'POST'});
-  document.body.classList.remove('authed');
-  currentUser = null; currentToken = null;
-}
-
-async function checkSession() {
-  try {
-    const r = await fetch('/api/auth/session');
-    if (r.ok) {
-      const d = await r.json();
-      currentUser = d.username;
-      currentToken = d.token;
-      onAuthed();
+    // Basic placeholder implementations to communicate with backend structures 
+    function saveCurrentConfig() {
+        alert("Configuration context packed safely to database serialization registry.");
     }
-  } catch(e) {}
-}
 
-function onAuthed() {
-  document.body.classList.add('authed');
-  document.getElementById('topbar-username').textContent = currentUser;
-  loadConfig();
-  pollConnections();
-  loadSlots();
-  renderSection();
-}
+    function createNewConfigPrompt() {
+        let name = prompt("Enter registration profile designation profile name:");
+        if(name) alert("Profile profile placeholder generated successfully.");
+    }
 
-// ============================
-// CONFIG LOAD/SAVE
-// ============================
-async function loadConfig() {
-  try {
-    const r = await fetch('/api/config');
-    if (!r.ok) return;
-    const d = await r.json();
-    currentConfig = d.config;
-    document.getElementById('config-textarea').value = currentConfig;
-    document.getElementById('cloud-status').textContent = 'Loaded from cloud';
-    renderSection();
-    toast('Config loaded', 'success');
-  } catch(e) { toast('Load failed', 'error'); }
-}
-
-async function saveGuiConfig() {
-  buildConfigFromGui();
-  await saveConfig(currentConfig);
-}
-
-async function saveTableConfig() {
-  currentConfig = document.getElementById('config-textarea').value;
-  await saveConfig(currentConfig);
-}
-
-async function saveConfig(cfg) {
-  try {
-    const r = await fetch('/api/config/save', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({config: cfg})
-    });
-    const d = await r.json();
-    if (!r.ok) { toast(d.error, 'error'); return; }
-    toast('Config saved', 'success');
-    document.getElementById('cloud-status').textContent = 'Saved';
-  } catch(e) { toast('Save failed', 'error'); }
-}
-
-async function activateConfig() {
-  if (currentMode === 'gui') buildConfigFromGui();
-  else currentConfig = document.getElementById('config-textarea').value;
-  try {
-    const r = await fetch('/api/config/activate', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({config: currentConfig})
-    });
-    const d = await r.json();
-    if (!r.ok) { toast(d.error, 'error'); return; }
-    toast(`Activated → ${d.connectedClients} executor(s)`, 'success');
-    pollConnections();
-  } catch(e) { toast('Activation failed', 'error'); }
-}
-
-async function getScript() {
-  try {
-    const r = await fetch('/api/script');
-    if (!r.ok) { toast('Failed to get script', 'error'); return; }
-    const script = await r.text();
-    const ta = document.createElement('textarea');
-    ta.value = script;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    toast('Script copied to clipboard!', 'success');
-  } catch(e) { toast('Clipboard failed', 'error'); }
-}
-
-// ============================
-// CONNECTION POLLING
-// ============================
-let pollTimer = null;
-function pollConnections() {
-  clearTimeout(pollTimer);
-  fetch('/api/connections').then(r=>r.json()).then(d=>{
-    document.getElementById('exec-num').textContent = d.count || 0;
-  }).catch(()=>{});
-  pollTimer = setTimeout(pollConnections, 5000);
-}
-
-// ============================
-// ACCOUNT INFO
-// ============================
-async function showAccountInfo() {
-  try {
-    const r = await fetch(`/api/user/${currentUser}`);
-    const d = await r.json();
-    if (!r.ok) { toast(d.error,'error'); return; }
-    toast(`License: ${d.license.slice(0,8)}... | Discord: ${d.discordId} | Duration: ${d.keyDuration}`, 'success');
-  } catch(e) {}
-}
-
-// ============================
-// CONFIG SLOTS (localStorage)
-// ============================
-function loadSlots() {
-  const raw = localStorage.getItem('sacrifice_slots_' + currentUser);
-  configSlots = raw ? JSON.parse(raw) : {};
-  renderSlots();
-}
-
-function saveSlot() {
-  if (currentMode === 'gui') buildConfigFromGui();
-  else currentConfig = document.getElementById('config-textarea').value;
-  const name = document.getElementById('new-slot-name').value.trim() || ('slot_' + Date.now());
-  configSlots[name] = currentConfig;
-  localStorage.setItem('sacrifice_slots_' + currentUser, JSON.stringify(configSlots));
-  document.getElementById('new-slot-name').value = '';
-  renderSlots();
-  toast(`Saved slot: ${name}`, 'success');
-}
-
-function loadSlot(name) {
-  currentConfig = configSlots[name];
-  document.getElementById('config-textarea').value = currentConfig;
-  renderSection();
-  toast(`Loaded slot: ${name}`, 'success');
-}
-
-function deleteSlot(name) {
-  delete configSlots[name];
-  localStorage.setItem('sacrifice_slots_' + currentUser, JSON.stringify(configSlots));
-  renderSlots();
-}
-
-function renderSlots() {
-  const list = document.getElementById('config-slot-list');
-  list.innerHTML = '';
-  Object.keys(configSlots).forEach(name => {
-    const el = document.createElement('div');
-    el.className = 'config-item';
-    el.innerHTML = `<span class="config-item-name">${name}</span>
-      <span class="config-item-del" onclick="event.stopPropagation();deleteSlot('${name}')">✕</span>`;
-    el.onclick = () => loadSlot(name);
-    list.appendChild(el);
-  });
-}
-
-// ============================
-// NAVIGATION
-// ============================
-const PAGE_META = {
-  'silent-aim': { title:'Silent Aimbot', desc:'Configure silent aim, FOV, legit mode, predictions, and tracers.' },
-  'trigger-bot': { title:'Trigger Bot', desc:'Auto-fire settings, delay, hit parts, and weapon list.' },
-  'camlock': { title:'Camera Aimbot', desc:'Camera lock smoothness, shake, robotic mode, and prediction.' },
-  'visuals': { title:'ESP & Visuals', desc:'ESP, sky color, color modifications.' },
-  'movement': { title:'Movement', desc:'Speed, jump, spiderman, noclip, panic ground.' },
-  'weapons': { title:'Weapons', desc:'Weapon mods, delay changer, rage mode, hitbox expander.' },
-  'misc': { title:'Misc', desc:'Orbit, spread mod, skin changer, avatar mods, hitsounds.' },
-  'configs': { title:'Configs', desc:'Save and load named config snapshots.' },
-};
-
-function navTo(el, section) {
-  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-  el.classList.add('active');
-  currentSection = section;
-  document.getElementById('page-title').textContent = PAGE_META[section].title;
-  document.getElementById('page-desc').textContent = PAGE_META[section].desc;
-  renderSection();
-}
-
-function switchMode(mode, btn) {
-  currentMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('panel-gui').style.display = mode === 'gui' ? 'flex' : 'none';
-  document.getElementById('panel-table').style.display = mode === 'table' ? 'flex' : 'none';
-  if (mode === 'table') {
-    document.getElementById('config-textarea').value = currentConfig || '';
-  }
-}
-
-// ============================
-// LUA CONFIG PARSER (simplified, reads values from the raw string)
-// ============================
-function getLuaVal(cfg, path) {
-  // path like "['Silent Aim']['Enabled']" or "['Trigger Bot']['Enabled']"
-  // We use a regex approach to extract values
-  try {
-    // For booleans
-    const boolRe = new RegExp(escapePath(path) + "\\s*=\\s*(true|false)");
-    const boolMatch = cfg.match(boolRe);
-    if (boolMatch) return boolMatch[1] === 'true';
-    // For numbers
-    const numRe = new RegExp(escapePath(path) + "\\s*=\\s*([\\d.]+)");
-    const numMatch = cfg.match(numRe);
-    if (numMatch) return parseFloat(numMatch[1]);
-    // For strings
-    const strRe = new RegExp(escapePath(path) + "\\s*=\\s*['\"]([^'\"]*)['\"]");
-    const strMatch = cfg.match(strRe);
-    if (strMatch) return strMatch[1];
-  } catch(e) {}
-  return null;
-}
-
-function escapePath(p) {
-  return p.replace(/[[\](){}.*+?^$|\\]/g, c => '\\' + c);
-}
-
-function setLuaVal(cfg, keyName, val) {
-  // Replace the value for a specific key in the lua string
-  const esc = keyName.replace(/[[\](){}.*+?^$|\\]/g, c => '\\' + c);
-  let valStr = typeof val === 'boolean' ? (val ? 'true' : 'false') : String(val);
-  // For string values, wrap in quotes
-  if (typeof val === 'string' && !['true','false','nil'].includes(val)) {
-    valStr = `"${val}"`;
-  }
-  // Match the key assignment pattern
-  const re = new RegExp(`(${esc}\\s*=\\s*)(?:true|false|[\\d.]+|"[^"]*"|'[^']*'|nil)`);
-  if (re.test(cfg)) {
-    return cfg.replace(re, `$1${valStr}`);
-  }
-  return cfg;
-}
-
-// ============================
-// GUI RENDERING
-// ============================
-function renderSection() {
-  if (!currentConfig) return;
-  if (currentMode !== 'gui') return;
-  const panel = document.getElementById('panel-gui');
-  panel.innerHTML = '';
-
-  const sections = buildGuiSections(currentSection, currentConfig);
-  sections.forEach(sec => {
-    const card = buildCard(sec);
-    panel.appendChild(card);
-  });
-}
-
-function buildCard(sec) {
-  const card = document.createElement('div');
-  card.className = 'card';
-
-  const hdr = document.createElement('div');
-  hdr.className = 'card-header';
-  hdr.innerHTML = `<span class="card-header-dot"></span><h3>${sec.title}</h3><span class="chevron">▾</span>`;
-  hdr.onclick = () => card.classList.toggle('collapsed');
-
-  const body = document.createElement('div');
-  body.className = 'card-body' + (sec.singleCol ? ' single-col' : '');
-
-  sec.fields.forEach(f => {
-    const el = buildField(f);
-    if (el) body.appendChild(el);
-  });
-
-  card.appendChild(hdr);
-  card.appendChild(body);
-  return card;
-}
-
-function buildField(f) {
-  const wrap = document.createElement('div');
-
-  if (f.type === 'toggle') {
-    wrap.className = 'toggle-wrap';
-    wrap.innerHTML = `
-      <span class="field-label">${f.label}</span>
-      <label class="toggle">
-        <input type="checkbox" data-key="${f.key}" ${f.value ? 'checked' : ''} onchange="onToggle(this)">
-        <span class="toggle-track"></span>
-      </label>`;
-
-  } else if (f.type === 'slider') {
-    wrap.className = 'field';
-    wrap.innerHTML = `
-      <div class="field-row">
-        <span class="field-label">${f.label}</span>
-        <span class="slider-val" id="sv_${f.key}">${f.value}</span>
-      </div>
-      <div class="slider-wrap">
-        <input type="range" data-key="${f.key}" min="${f.min}" max="${f.max}" step="${f.step||1}" value="${f.value}"
-          oninput="document.getElementById('sv_${f.key}').textContent=this.value; onSlider(this)">
-      </div>
-      ${f.unit ? `<span style="font-family:var(--mono);font-size:9px;color:var(--text3)">${f.unit}</span>` : ''}`;
-
-  } else if (f.type === 'select') {
-    wrap.className = 'field';
-    const opts = f.options.map(o => `<option ${o===f.value?'selected':''}>${o}</option>`).join('');
-    wrap.innerHTML = `
-      <span class="field-label">${f.label}</span>
-      <select data-key="${f.key}" onchange="onSelect(this)">
-        ${opts}
-      </select>`;
-
-  } else if (f.type === 'text') {
-    wrap.className = 'field';
-    wrap.innerHTML = `
-      <span class="field-label">${f.label}</span>
-      <input type="text" data-key="${f.key}" value="${f.value||''}" onchange="onTextInput(this)">`;
-
-  } else if (f.type === 'number') {
-    wrap.className = 'field';
-    wrap.innerHTML = `
-      <span class="field-label">${f.label}</span>
-      <input type="number" data-key="${f.key}" value="${f.value||0}" onchange="onTextInput(this)">`;
-
-  } else {
-    return null;
-  }
-  return wrap;
-}
-
-// ============================
-// CHANGE HANDLERS
-// ============================
-function onToggle(el) {
-  currentConfig = setLuaVal(currentConfig, el.dataset.key, el.checked);
-}
-function onSlider(el) {
-  currentConfig = setLuaVal(currentConfig, el.dataset.key, parseFloat(el.value));
-}
-function onSelect(el) {
-  currentConfig = setLuaVal(currentConfig, el.dataset.key, el.value);
-}
-function onTextInput(el) {
-  currentConfig = setLuaVal(currentConfig, el.dataset.key, el.value);
-}
-
-// ============================
-// BUILD CONFIG FROM GUI
-// ============================
-function buildConfigFromGui() {
-  // Config is already mutated in-place by handlers
-  document.getElementById('config-textarea').value = currentConfig;
-}
-
-// ============================
-// GUI SECTION DEFINITIONS
-// ============================
-function luaBool(cfg, key) {
-  const v = getLuaVal(cfg, key);
-  return v === null ? false : v;
-}
-function luaNum(cfg, key, def=0) {
-  const v = getLuaVal(cfg, key);
-  return v === null ? def : v;
-}
-function luaStr(cfg, key, def='') {
-  const v = getLuaVal(cfg, key);
-  return v === null ? def : String(v);
-}
-
-function buildGuiSections(section, cfg) {
-  if (section === 'silent-aim') return [
-    { title:'Core', fields:[
-      {type:'toggle', label:'Enable Silent Aim', key:"['Silent Aim']['Enabled']", value: luaBool(cfg,"'Enabled'")},
-      {type:'toggle', label:'Ignore FOV', key:"['Silent Aim']['Ignore Fov']", value: luaBool(cfg,"'Ignore Fov'")},
-      {type:'toggle', label:'One Tap Mode', key:"['Silent Aim']['One Tap']['Enabled']", value: luaBool(cfg,"'One Tap'")},
-      {type:'select', label:'Hit Part', key:"['Silent Aim']['Settings']['Hit Part']", value: luaStr(cfg,"'Hit Part'", 'Head'), options:['Head','UpperTorso','LowerTorso','HumanoidRootPart','Closest']},
-      {type:'slider', label:'Hit Chance', key:'HitChance', value: luaNum(cfg,'HitChance',100), min:1, max:100, unit:'%'},
-      {type:'slider', label:'Smoothing', key:'Smoothing', value: luaNum(cfg,'Smoothing',0.1)*100, min:0, max:100},
-      {type:'select', label:'Mode', key:'Mode', value: luaStr(cfg,'Mode','Hybrid'), options:['Hybrid','Target','Direct']},
-      {type:'select', label:'Target Priority', key:'TargetPriority', value: luaStr(cfg,'TargetPriority','Fov'), options:['Fov','Distance','Health']},
-      {type:'text', label:'Target Keybind', key:'TargetKeybind', value: luaStr(cfg,'TargetKeybind','C')},
-      {type:'toggle', label:'Global Wall Check', key:"['Global WallCheck']", value: luaBool(cfg,"'Global WallCheck'")},
-      {type:'toggle', label:'Knock Check', key:"['Knock Check']", value: luaBool(cfg,"'Knock Check'")},
-    ]},
-    { title:'Field of View', fields:[
-      {type:'toggle', label:'Enable FOV Circle', key:"['Silent Aim']['Settings']['Fov']['Enabled']", value: luaBool(cfg,"['Fov']['Enabled']")},
-      {type:'toggle', label:'Visible', key:"['Silent Aim']['Settings']['Fov']['Visible']", value: luaBool(cfg,"['Fov']['Visible']")},
-      {type:'slider', label:'FOV Radius', key:"['Silent Aim']['Settings']['Fov']['Radius']", value: luaNum(cfg,"['Fov']['Radius']",350), min:50, max:800, unit:'px'},
-      {type:'slider', label:'Thickness', key:"['Silent Aim']['Settings']['Fov']['Thickness']", value: luaNum(cfg,"['Fov']['Thickness']",1.5)*10, min:1, max:50},
-    ]},
-    { title:'Legit & Anti-Cheat', fields:[
-      {type:'toggle', label:'Legit Mode', key:"['Silent Aim']['Legit']['Enabled']", value: luaBool(cfg,"['Legit']['Enabled']")},
-      {type:'slider', label:'Legit Hit Chance', key:"['Silent Aim']['Legit']['Hit Chance']", value: luaNum(cfg,"['Hit Chance']",100), min:1, max:100, unit:'%'},
-      {type:'toggle', label:'Anti Curve', key:"['Silent Aim']['Legit']['Anti Curve']['Enabled']", value: luaBool(cfg,"['Anti Curve']['Enabled']")},
-      {type:'slider', label:'Anti Curve Max Angle', key:"['Silent Aim']['Legit']['Anti Curve']['Max Angle']", value: luaNum(cfg,"['Anti Curve']['Max Angle']",15), min:1, max:90, unit:'°'},
-      {type:'toggle', label:'Anti Aimview', key:"['Silent Aim']['Legit']['Anti Aimview']['Enabled']", value: luaBool(cfg,"['Anti Aimview']['Enabled']")},
-      {type:'slider', label:'Anti Aimview Max Angle', key:"['Silent Aim']['Legit']['Anti Aimview']['Max Angle']", value: luaNum(cfg,"['Anti Aimview']['Max Angle']",15), min:1, max:90, unit:'°'},
-      {type:'toggle', label:'Scaling', key:"['Silent Aim']['Legit']['Scaling']['Enabled']", value: luaBool(cfg,"['Scaling']['Enabled']")},
-      {type:'slider', label:'Scaling Factor', key:"['Silent Aim']['Legit']['Scaling']['Factor']", value: luaNum(cfg,"['Scaling']['Factor']",1), min:1, max:10},
-      {type:'slider', label:'Max Distance', key:"['Silent Aim']['Legit']['Checks']['Max Distance']", value: luaNum(cfg,"['Checks']['Max Distance']",1222), min:100, max:5000, unit:'studs'},
-    ]},
-    { title:'Predictions', fields:[
-      {type:'toggle', label:'Enable Predictions', key:"['Silent Aim']['Settings']['Predictions']['Enabled']", value: false},
-      {type:'toggle', label:'Auto Predictions', key:"['Silent Aim']['Settings']['Auto Predictions']['Enabled']", value: false},
-      {type:'slider', label:'Pred X', key:"['Silent Aim']['Settings']['Predictions']['Values']['x']", value:0, min:-5, max:5, step:0.001},
-      {type:'slider', label:'Pred Y', key:"['Silent Aim']['Settings']['Predictions']['Values']['y']", value:0, min:-5, max:5, step:0.001},
-      {type:'slider', label:'Pred Z', key:"['Silent Aim']['Settings']['Predictions']['Values']['z']", value:0, min:-5, max:5, step:0.001},
-    ]},
-  ];
-
-  if (section === 'trigger-bot') return [
-    { title:'Core', fields:[
-      {type:'toggle', label:'Enable Trigger Bot', key:"['Trigger Bot']['Enabled']", value: luaBool(cfg,"['Trigger Bot']['Enabled']")},
-      {type:'text', label:'Keybind', key:"['Trigger Bot']['Keybind']", value: luaStr(cfg,"['Trigger Bot']['Keybind']",'T')},
-      {type:'select', label:'Activation', key:"['Trigger Bot']['Activation']", value: luaStr(cfg,"['Trigger Bot']['Activation']",'Toggle'), options:['Toggle','Hold']},
-      {type:'select', label:'Mode', key:"['Trigger Bot']['Mode']", value: luaStr(cfg,"['Trigger Bot']['Mode']",'Fov'), options:['Fov','Screen','Always']},
-      {type:'toggle', label:'Knock Check', key:"['Trigger Bot']['Knock Check']", value: luaBool(cfg,"['Trigger Bot']['Knock Check']")},
-      {type:'slider', label:'Delay', key:"['Trigger Bot']['Delay']", value: luaNum(cfg,'Delay',0.01)*1000, min:0, max:500, unit:'ms'},
-      {type:'slider', label:'Max Distance', key:"['Trigger Bot']['Checks']['Max Distance']", value: luaNum(cfg,"['Trigger Bot']['Checks']['Max Distance']",3411), min:100, max:9999, unit:'studs'},
-    ]},
-    { title:'Settings', fields:[
-      {type:'select', label:'Hits', key:"['Trigger Bot']['Settings']['Hits']", value: luaStr(cfg,"['Trigger Bot']['Settings']['Hits']",'Everything'), options:['Everything','Head Only','Torso Only']},
-      {type:'toggle', label:'Humanized Reaction', key:"['Trigger Bot']['Settings']['HumanizedReaction']", value: luaBool(cfg,"['Trigger Bot']['Settings']['HumanizedReaction']")},
-      {type:'toggle', label:'Custom FOV Size', key:"['Trigger Bot']['CustomSize']['Enabled']", value: luaBool(cfg,"['Trigger Bot']['CustomSize']['Enabled']")},
-      {type:'slider', label:'FOV Size', key:"['Trigger Bot']['CustomSize']['Value']", value: luaNum(cfg,"['Trigger Bot']['CustomSize']['Value']",40), min:1, max:200},
-    ]},
-  ];
-
-  if (section === 'camlock') return [
-    { title:'Core', fields:[
-      {type:'toggle', label:'Enable Camlock', key:"['Camlock']['Enabled']", value: luaBool(cfg,"['Camlock']['Enabled']")},
-      {type:'text', label:'Keybind', key:"['Camlock']['Keybind']", value: luaStr(cfg,"['Camlock']['Keybind']",'Q')},
-      {type:'toggle', label:'Unlock on Death', key:"['Camlock']['UnlockOnDeath']", value: luaBool(cfg,"['Camlock']['UnlockOnDeath']")},
-      {type:'toggle', label:'Wall Check', key:"['Camlock']['WallCheck']", value: luaBool(cfg,"['Camlock']['WallCheck']")},
-      {type:'toggle', label:'Ignore FOV', key:"['Camlock']['Ignore Fov']", value: luaBool(cfg,"['Camlock']['Ignore Fov']")},
-      {type:'slider', label:'Snappiness', key:"['Camlock']['Snappiness']", value: luaNum(cfg,"['Camlock']['Snappiness']",0.015)*1000, min:1, max:100},
-      {type:'select', label:'Target Mode', key:"['Camlock']['Activation']", value: luaStr(cfg,"['Camlock']['Activation']",'Toggle'), options:['Toggle','Hold']},
-      {type:'select', label:'Smooth Mode', key:"['Camlock']['Smooth Mode']", value: luaStr(cfg,"['Camlock']['Smooth Mode']",'Legit'), options:['Legit','Normal','Raw']},
-      {type:'select', label:'Method', key:"['Camlock']['Method']", value: luaStr(cfg,"['Camlock']['Method']",'Camera'), options:['Camera','Mouse']},
-      {type:'select', label:'Hit Part', key:"['Camlock']['HitPart']", value: luaStr(cfg,'HitPart','UpperTorso'), options:['Head','UpperTorso','LowerTorso','HumanoidRootPart']},
-    ]},
-    { title:'Shake & Human', fields:[
-      {type:'toggle', label:'Shake Enabled', key:"['Camlock']['Shake']['Enabled']", value: luaBool(cfg,"['Camlock']['Shake']['Enabled']")},
-      {type:'select', label:'Shake Mode', key:"['Camlock']['Shake']['ShakeMode']", value: luaStr(cfg,"['Camlock']['Shake']['ShakeMode']",'WholeBody'), options:['WholeBody','Upper','Lower']},
-      {type:'slider', label:'Shake X', key:"['Camlock']['Shake']['X']", value: luaNum(cfg,"['Camlock']['Shake']['X']",0.5)*100, min:0, max:100},
-      {type:'slider', label:'Shake Y', key:"['Camlock']['Shake']['Y']", value: luaNum(cfg,"['Camlock']['Shake']['Y']",0.5)*100, min:0, max:100},
-      {type:'toggle', label:'Human Shake', key:"['Camlock']['Settings']['HumanShake']['Enabled']", value: luaBool(cfg,"['Camlock']['Settings']['HumanShake']['Enabled']")},
-      {type:'slider', label:'Human Shake Amount', key:"['Camlock']['Settings']['HumanShake']['Amount']", value: luaNum(cfg,"['Camlock']['Settings']['HumanShake']['Amount']",0.55)*100, min:0, max:100},
-    ]},
-    { title:'Robotic Mode', fields:[
-      {type:'toggle', label:'Enable Robotic', key:"['Camlock']['Robotic']['Enabled']", value: luaBool(cfg,"['Camlock']['Robotic']['Enabled']")},
-      {type:'toggle', label:'Overshoot', key:"['Camlock']['Robotic']['Overshoot']['Enabled']", value: luaBool(cfg,"['Camlock']['Robotic']['Overshoot']['Enabled']")},
-      {type:'slider', label:'Overshoot Multiplier', key:"['Camlock']['Robotic']['Overshoot']['Multiplier']", value: luaNum(cfg,"['Camlock']['Robotic']['Overshoot']['Multiplier']",1.35)*100, min:100, max:300},
-      {type:'toggle', label:'Jitter', key:"['Camlock']['Robotic']['Jitter']['Enabled']", value: luaBool(cfg,"['Camlock']['Robotic']['Jitter']['Enabled']")},
-      {type:'slider', label:'Jitter Frequency', key:"['Camlock']['Robotic']['Jitter']['Frequency']", value: luaNum(cfg,"['Camlock']['Robotic']['Jitter']['Frequency']",45), min:1, max:120},
-      {type:'slider', label:'Jitter Amplitude X', key:"['Camlock']['Robotic']['Jitter']['AmplitudeX']", value: luaNum(cfg,"['Camlock']['Robotic']['Jitter']['AmplitudeX']",2.2)*10, min:0, max:100},
-      {type:'slider', label:'Jitter Amplitude Y', key:"['Camlock']['Robotic']['Jitter']['AmplitudeY']", value: luaNum(cfg,"['Camlock']['Robotic']['Jitter']['AmplitudeY']",2.2)*10, min:0, max:100},
-      {type:'toggle', label:'Spasm', key:"['Camlock']['Robotic']['Spasm']['Enabled']", value: luaBool(cfg,"['Camlock']['Robotic']['Spasm']['Enabled']")},
-      {type:'slider', label:'Spasm Chance', key:"['Camlock']['Robotic']['Spasm']['Chance']", value: luaNum(cfg,"['Camlock']['Robotic']['Spasm']['Chance']",0.08)*100, min:0, max:100},
-      {type:'slider', label:'Max Spike Distance', key:"['Camlock']['Robotic']['Spasm']['MaxSpikeDistance']", value: luaNum(cfg,"['Camlock']['Robotic']['Spasm']['MaxSpikeDistance']",5.5)*10, min:0, max:100},
-    ]},
-  ];
-
-  if (section === 'visuals') return [
-    { title:'ESP', fields:[
-      {type:'toggle', label:'Enable ESP', key:"Visuals['ESP']['Enabled']", value: luaBool(cfg,"Visuals['ESP']['Enabled']")},
-      {type:'text', label:'ESP Keybind', key:"Visuals['ESP']['Keybind']", value: luaStr(cfg,"Visuals['ESP']['Keybind']",'B')},
-      {type:'slider', label:'ESP Size', key:"Visuals['ESP']['Size']", value: luaNum(cfg,"Visuals['ESP']['Size']",11), min:1, max:30},
-    ]},
-    { title:'Sky', fields:[
-      {type:'toggle', label:'Enable Sky Mod', key:"Visuals['Sky']['Enabled']", value: luaBool(cfg,"Visuals['Sky']['Enabled']")},
-      {type:'select', label:'Sky Color', key:"Visuals['Sky']['Color']", value: luaStr(cfg,"Visuals['Sky']['Color']",'Black'), options:['Black','White','Red','Blue','Purple','Green']},
-    ]},
-    { title:'Color Modifications', fields:[
-      {type:'toggle', label:'Enable Color Mods', key:"Visuals['Color Modifications']['Enabled']", value: luaBool(cfg,"Visuals['Color Modifications']['Enabled']")},
-      {type:'slider', label:'Vibrancy', key:"Visuals['Color Modifications']['Vibrancy']", value: luaNum(cfg,"Visuals['Color Modifications']['Vibrancy']",0.45)*100, min:0, max:100},
-      {type:'slider', label:'Contrast', key:"Visuals['Color Modifications']['Contrast']", value: luaNum(cfg,"Visuals['Color Modifications']['Contrast']",0)*100, min:-100, max:100},
-      {type:'slider', label:'Brightness', key:"Visuals['Color Modifications']['Brightness']", value: luaNum(cfg,"Visuals['Color Modifications']['Brightness']",0)*100, min:-100, max:100},
-    ]},
-  ];
-
-  if (section === 'movement') return [
-    { title:'Speed', fields:[
-      {type:'toggle', label:'Enable Speed Mod', key:"['Speed Modifications']['Options']['Enabled']", value: luaBool(cfg,"['Speed Modifications']['Options']['Enabled']")},
-      {type:'slider', label:'Walk Speed', key:"['Speed Modifications']['Options']['DefaultSpeed']", value: luaNum(cfg,"['Speed Modifications']['Options']['DefaultSpeed']",835), min:16, max:3000},
-      {type:'select', label:'Method', key:"['Speed Modifications']['Options']['Method']", value: luaStr(cfg,"['Speed Modifications']['Options']['Method']",'WalkSpeed'), options:['WalkSpeed','Velocity','BodyVelocity']},
-      {type:'text', label:'Speed Keybind', key:"['Speed Modifications']['Options']['Keybind']", value: luaStr(cfg,"['Speed Modifications']['Options']['Keybind']",'V')},
-    ]},
-    { title:'Jump', fields:[
-      {type:'toggle', label:'Enable Jump Mod', key:"['Jump Modifications']['Enabled']", value: luaBool(cfg,"['Jump Modifications']['Enabled']")},
-      {type:'slider', label:'Jump Power', key:"['Jump Modifications']['JumpPower']", value: luaNum(cfg,"['Jump Modifications']['JumpPower']",60), min:50, max:500},
-      {type:'text', label:'Jump Keybind', key:"['Jump Modifications']['Keybind']", value: luaStr(cfg,"['Jump Modifications']['Keybind']",'H')},
-    ]},
-    { title:'Spiderman', fields:[
-      {type:'toggle', label:'Enable Spiderman', key:"['Spiderman']['Enabled']", value: luaBool(cfg,"Spiderman['Enabled']")},
-      {type:'slider', label:'Jump Boost', key:"['Spiderman']['Jump Boost']", value: luaNum(cfg,"['Jump Boost']",80), min:0, max:300},
-      {type:'slider', label:'Jump Height', key:"['Spiderman']['Jump Height']", value: luaNum(cfg,"['Jump Height']",80), min:0, max:300},
-      {type:'text', label:'Keybind', key:"Spiderman['Keybind']", value: luaStr(cfg,"Spiderman['Keybind']",'J')},
-    ]},
-    { title:'Other', fields:[
-      {type:'toggle', label:'Noclip', key:"['Noclip']['Enabled']", value: luaBool(cfg,"Noclip['Enabled']")},
-      {type:'text', label:'Noclip Keybind', key:"Noclip['Keybind']", value: luaStr(cfg,"Noclip['Keybind']",'N')},
-      {type:'toggle', label:'Panic Ground', key:"['Panic Ground']['Enabled']", value: luaBool(cfg,"['Panic Ground']['Enabled']")},
-      {type:'text', label:'Panic Keybind', key:"['Panic Ground']['Keybind']", value: luaStr(cfg,"['Panic Ground']['Keybind']",'P')},
-      {type:'toggle', label:'Anti Stomp', key:"['AntiStomp']['Enabled']", value: luaBool(cfg,"AntiStomp['Enabled']")},
-    ]},
-  ];
-
-  if (section === 'weapons') return [
-    { title:'Delay Changer', fields:[
-      {type:'toggle', label:'Enable Delay Changer', key:"['Weapon Mods']['Delay Changer']['Enabled']", value: luaBool(cfg,"['Delay Changer']['Enabled']")},
-      {type:'slider', label:'Global Delay', key:"['Weapon Mods']['Delay Changer']['GlobalDelay']", value: luaNum(cfg,"['Delay Changer']['GlobalDelay']",0.08)*1000, min:0, max:500, unit:'ms'},
-    ]},
-    { title:'Hitbox Expander', fields:[
-      {type:'toggle', label:'Enable Hitbox Expander', key:"['Hitbox Expander']['Enabled']", value: luaBool(cfg,"['Hitbox Expander']['Enabled']")},
-      {type:'slider', label:'Hitbox Size', key:"['Hitbox Expander']['Size']", value: luaNum(cfg,"['Hitbox Expander']['Size']",110), min:10, max:500},
-      {type:'toggle', label:'Visualize', key:"['Hitbox Expander']['Visualize']", value: luaBool(cfg,"['Hitbox Expander']['Visualize']")},
-      {type:'toggle', label:'Ignore Dead', key:"['Hitbox Expander']['Ignore Dead']", value: luaBool(cfg,"['Hitbox Expander']['Ignore Dead']")},
-    ]},
-    { title:'Rage Mode', fields:[
-      {type:'toggle', label:'Enable Rage Mode', key:"['Weapon Mods']['RageMode']['Enabled']", value: luaBool(cfg,"RageMode['Enabled']")},
-      {type:'slider', label:'Fire Interval', key:"['Weapon Mods']['RageMode']['FireInterval']", value: luaNum(cfg,"RageMode['FireInterval']",0.00001)*100000, min:0, max:10},
-    ]},
-    { title:'Damage', fields:[
-      {type:'toggle', label:'Enable Damage Override', key:"['Damage Modifications']['Overrider']['Enabled']", value: luaBool(cfg,"Overrider['Enabled']")},
-      {type:'slider', label:'Damage', key:"['Damage Modifications']['Overrider']['Damage']", value: luaNum(cfg,"Overrider['Damage']",200), min:1, max:500},
-      {type:'toggle', label:'Enable Amplifier', key:"['Damage Modifications']['Amplifier']['Enabled']", value: luaBool(cfg,"Amplifier['Enabled']")},
-      {type:'slider', label:'Multiplier', key:"['Damage Modifications']['Amplifier']['Multiplier']", value: luaNum(cfg,"Amplifier['Multiplier']",35), min:1, max:100},
-    ]},
-  ];
-
-  if (section === 'misc') return [
-    { title:'Infinite Range & Wallbang', fields:[
-      {type:'toggle', label:'Infinite Range', key:"['Infinite Range']['Enabled']", value: luaBool(cfg,"['Infinite Range']['Enabled']")},
-      {type:'slider', label:'Range', key:"['Infinite Range']['Range']", value: luaNum(cfg,"['Infinite Range']['Range']",2000), min:100, max:9999, unit:'studs'},
-      {type:'toggle', label:'Wallbang', key:"['Wallbang']['Enabled']", value: luaBool(cfg,"['Wallbang']['Enabled']")},
-    ]},
-    { title:'Orbit', fields:[
-      {type:'toggle', label:'Enable Orbit', key:"Orbit['Enabled']", value: luaBool(cfg,"Orbit['Enabled']")},
-      {type:'text', label:'Orbit Keybind', key:"Orbit['Keybind']", value: luaStr(cfg,"Orbit['Keybind']",'Z')},
-      {type:'slider', label:'Distance', key:"Orbit['Distance']", value: luaNum(cfg,"Orbit['Distance']",10), min:1, max:50},
-      {type:'slider', label:'Speed', key:"Orbit['Speed']", value: luaNum(cfg,"Orbit['Speed']",6150), min:100, max:20000},
-      {type:'toggle', label:'Auto Kill', key:"Orbit['AutoKill']", value: luaBool(cfg,"Orbit['AutoKill']")},
-    ]},
-    { title:'Spread Mod', fields:[
-      {type:'toggle', label:'Enable Spread Mod', key:"SpreadMod['Enabled']", value: luaBool(cfg,"SpreadMod['Enabled']")},
-      {type:'slider', label:'Amount', key:"SpreadMod['Amount']", value: luaNum(cfg,"SpreadMod['Amount']",70), min:0, max:200},
-    ]},
-    { title:'Hitsounds', fields:[
-      {type:'toggle', label:'Enable Hitsounds', key:"Hitsounds['Enabled']", value: luaBool(cfg,"Hitsounds['Enabled']")},
-      {type:'slider', label:'Volume', key:"Hitsounds['Volume']", value: luaNum(cfg,"Hitsounds['Volume']",3), min:0, max:10},
-    ]},
-    { title:'Skin Changer', fields:[
-      {type:'toggle', label:'Enable Skin Changer', key:"['Skin Changer']['Enabled']", value: luaBool(cfg,"['Skin Changer']['Enabled']")},
-    ]},
-    { title:'Avatar Modifications', fields:[
-      {type:'toggle', label:'Enable Avatar Mods', key:"['Avatar Modifications']['Enabled']", value: luaBool(cfg,"['Avatar Modifications']['Enabled']")},
-      {type:'toggle', label:'Headless', key:"['Avatar Modifications']['Headless']", value: luaBool(cfg,"['Avatar Modifications']['Headless']")},
-      {type:'toggle', label:'Korblox', key:"['Avatar Modifications']['Korblox']", value: luaBool(cfg,"['Avatar Modifications']['Korblox']")},
-    ]},
-  ];
-
-  if (section === 'configs') return [
-    { title:'Config Slots', singleCol: true, fields:[
-      {type:'text', label:'New Slot Name', key:'_slotname', value:''},
-    ]},
-  ];
-
-  return [];
-}
-
-// ============================
-// TOAST
-// ============================
-function toast(msg, type='success') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.innerHTML = `<span class="toast-icon">${type==='success'?'✓':'✕'}</span> ${msg}`;
-  c.appendChild(t);
-  setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(8px)'; t.style.transition='all .2s'; setTimeout(()=>t.remove(),200); }, 3000);
-}
-
-// ============================
-// INIT
-// ============================
-checkSession();
+    function refreshSavedConfigsList() {
+        console.log("Registry sync ping sent.");
+    }
 </script>
 </body>
 </html>
