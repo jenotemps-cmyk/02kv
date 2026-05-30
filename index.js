@@ -21,13 +21,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_jwt_tokens';
 const DB_FILE = path.join(__dirname, 'database.json');
 
 // Default configuration (Sacrifice Lua table)
-const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
+const DEFAULT_LUA_CONFIG = `getgenv().sacrifice = {
     ["Global WallCheck"] = true, 
     ["Knock Check"] = true,
 
     Watermark = {
         Enabled = true,
-        Username = "Sacrifice.cc", 
+        Username = "eso", 
         Color = Color3.fromRGB(12, 12, 255) 
     },
 
@@ -56,7 +56,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
             },
         },
         ['Settings'] = {
-            ['Hit Part'] = 'Closest Point',
+            ['Hit Part'] = 'Head',
             ['Closest Point'] = {
                 ['Samples'] = 3,
                 ['Diagonal'] = false,
@@ -91,10 +91,10 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
             },
         },
         TargetPriority = "Fov", 
-        Mode = "Target", 
+        Mode = "Hybrid", 
         TargetKeybind = "C", 
         LockedTarget = nil, 
-        TargetModeForceHit = true, -- Set to true so Target Mode completely ignores the FOV circle once locked
+        TargetModeForceHit = false,
         Smoothing = 0.1, 
         HitChance = 100,
     },
@@ -102,8 +102,6 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
     ['Trigger Bot'] = {
         ['Enabled'] = true,
         ['Keybind'] = "T",
-        ['TargetKeybind'] = "H",
-        ['LockedTarget'] = nil,
         ['Interval'] = 0.01,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -157,8 +155,8 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         ['Enabled'] = true,
         ['Keybind'] = "Q",
         ['UnlockOnDeath'] = true,
-        ['WallCheck'] = true,
-        ['Snappiness'] = 0.045,
+        ['WallCheck'] = false,
+        ['Snappiness'] = 0.015,
         ['Ignore Fov'] = true,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -230,7 +228,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Height = 0, 
         Speed = 6150, 
         AutoKill = true,
-        AutoReload = true,
+        AutoReload = false,
         ReloadAmmoCount = 0 
     },
 
@@ -248,7 +246,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
 
     ["Weapon Mods"] = {
         Traced = { 
-           RapidFire = false, RapidFireDelay = 0.01 
+           RapidFire = true, RapidFireDelay = 0.15
         },
         ["Delay Changer"] = {
             Enabled = true,
@@ -280,7 +278,7 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
     },
     
     ["Speed Modifications"] = { 
-        Options = { Enabled = true, DefaultSpeed = 35, Method = "WalkSpeed", Keybind = "V" } 
+        Options = { Enabled = true, DefaultSpeed = 835, Method = "WalkSpeed", Keybind = "V" } 
     },
 
     ["Jump Modifications"] = {
@@ -298,6 +296,12 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Enabled = true, 
         ["Jump Boost"] = 80,["Jump Delay"] = 0, 
         Keybind = "J" 
+    },
+    
+    ["Infinite Range"] = { 
+        enabled = true, 
+        range = 2000, 
+        bypasspos = 65 
     },
 
     ["Wallbang"] = {
@@ -343,12 +347,6 @@ const DEFAULT_LUA_CONFIG = `getgenv().Sacrifice = {
         Enabled = false,
         Sound = "", 
         Volume = 3 
-    },
-
-    ["Infinite Range"] = {
-        enabled = true,
-        range = 1000,    
-        bypasspos = 10 
     }
 }`;
 
