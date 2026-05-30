@@ -61,6 +61,21 @@ body::before {
   z-index: -1;
   background: radial-gradient(circle at 54% 0%, rgba(255, 48, 72, 0.08), transparent 38%);
   pointer-events: none;
+  transition: background 0.3s ease;
+}
+
+/* Mouse-following glow effect */
+.mouse-glow {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 48, 72, 0.12) 0%, rgba(255, 48, 72, 0.04) 40%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  transform: translate(-50%, -50%);
+  transition: left 0.15s ease-out, top 0.15s ease-out;
+  will-change: left, top;
 }
 
 .hidden {
@@ -90,6 +105,19 @@ body::before {
 .auth-card {
   width: min(430px, 100%);
   padding: 34px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
 }
 
 .logo-area {
@@ -222,6 +250,23 @@ body::before {
   background: linear-gradient(135deg, #ff3048, #bd172d);
   color: white;
   box-shadow: 0 0 22px rgba(255, 48, 72, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover::after {
+  left: 100%;
 }
 
 .btn-secondary,
@@ -503,11 +548,33 @@ body::before {
   animation-delay: 110ms;
 }
 
+.setting-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.setting-card:hover::before,
+.feature-card:hover::before {
+  opacity: 0.4;
+}
+
 .setting-card:hover,
 .feature-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 48, 72, 0.18);
   box-shadow: 0 28px 86px rgba(0, 0, 0, 0.56), 0 0 28px rgba(255, 48, 72, 0.06);
+}
+
+.setting-card,
+.feature-card {
+  position: relative;
 }
 
 .setting-card-header,
