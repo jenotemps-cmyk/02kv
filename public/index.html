@@ -3,156 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Perc // Roblox Configuration Hub</title>
+  <title>Perc</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-additions.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 </head>
 <body>
-  
-  <!-- Canvas background animation overlay -->
-  <div class="bg-gradient-overlay"></div>
 
-  <!-- AUTH SECTION -->
+  <!-- AUTH -->
   <div id="auth-container" class="auth-wrapper">
     <div class="glass-card auth-card">
       <div class="logo-area">
-        <div class="pulse-ring"></div>
-        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
-        <span class="logo-fallback-text" style="display:none; font-size: 2.5rem; font-weight: 800; color: rgb(103, 38, 240);">P</span>
+        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none;">P</span>
       </div>
 
-      <!-- Toast notifications inside Auth -->
       <div id="auth-toast" class="toast-notification hidden"></div>
       
-      <!-- Login Form -->
       <form id="login-form" class="auth-form">
-        <h2 class="form-title">Welcome Back</h2>
+        <h2 class="form-title">login</h2>
         <div class="input-group">
           <input type="text" id="login-username" required placeholder=" ">
-          <label for="login-username">Username</label>
+          <label for="login-username">username</label>
         </div>
         <div class="input-group">
           <input type="password" id="login-password" required placeholder=" ">
-          <label for="login-password">Password</label>
+          <label for="login-password">password</label>
         </div>
-        <button type="submit" class="btn btn-primary btn-glow">Sign In</button>
-        <p class="toggle-text">New here? <a href="#" id="to-signup">Create an Account</a></p>
+        <button type="submit" class="btn btn-primary">sign in</button>
+        <p class="toggle-text">no account? <a href="#" id="to-signup">register</a></p>
       </form>
 
-      <!-- Register Form -->
       <form id="signup-form" class="auth-form hidden">
-        <h2 class="form-title">Create Account</h2>
+        <h2 class="form-title">register</h2>
         <div class="input-group">
           <input type="text" id="reg-username" required placeholder=" ">
-          <label for="reg-username">Username</label>
+          <label for="reg-username">username</label>
         </div>
         <div class="input-group">
           <input type="password" id="reg-password" required placeholder=" ">
-          <label for="reg-password">Password</label>
+          <label for="reg-password">password</label>
         </div>
         <div class="input-group">
           <input type="text" id="reg-license" required placeholder=" ">
-          <label for="reg-license">License Key</label>
+          <label for="reg-license">license key</label>
         </div>
-        <button type="submit" class="btn btn-primary btn-glow">Register License</button>
-        <p class="toggle-text">Existing user? <a href="#" id="to-login">Sign In</a></p>
+        <button type="submit" class="btn btn-primary">register</button>
+        <p class="toggle-text">got an account? <a href="#" id="to-login">sign in</a></p>
       </form>
     </div>
   </div>
 
-  <!-- MAIN DASHBOARD -->
+  <!-- DASHBOARD -->
   <div id="dashboard-container" class="dashboard-wrapper hidden">
-    <!-- Navbar -->
     <header class="navbar">
       <div class="nav-logo">
-        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
-        <span class="logo-fallback-text" style="display:none; font-size: 1.5rem; font-weight: 800; color: rgb(103, 38, 240); margin-right: 8px;">P</span>
+        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none; margin-right: 8px;">P</span>
       </div>
       <div class="nav-status">
         <div class="status-indicator">
           <span class="status-pulse green" id="status-dot"></span>
-          <span class="status-label" id="status-text">Ready</span>
+          <span class="status-label" id="status-text">ready</span>
         </div>
         <div class="session-info">
-          <span id="user-display">User: Guest</span>
-          
-          <button id="btn-logout" class="btn btn-secondary btn-small">Logout</button>
+          <span id="user-display">guest</span>
+          <button id="btn-logout" class="btn btn-secondary btn-small">logout</button>
         </div>
       </div>
     </header>
 
-    <!-- Content Panel -->
     <main class="dashboard-content">
-      <!-- (phrase removed as its own card; rendered as floating label above editor) -->
-
-      <!-- Editor Panel -->
+      <!-- Config Editor -->
       <div class="glass-card editor-card">
         <div class="card-header">
-          <h2>Configuration File (Lua / Text)</h2>
-          <span id="save-status" class="save-status-text">Draft version</span>
+          <h2>config</h2>
+          <span id="save-status" class="save-status-text">draft</span>
         </div>
         
-        <div id="phrase-display" class="floating-phrase">Loading...</div>
+        <div id="phrase-display" class="floating-phrase"></div>
         <div class="editor-container">
-          <textarea id="config-editor" spellcheck="false" placeholder="Enter configuration data..."></textarea>
+          <textarea id="config-editor" spellcheck="false" placeholder="config..."></textarea>
         </div>
 
-        <!-- Footer Control Buttons -->
         <div class="control-footer">
           <div class="footer-left">
-            <button id="btn-load" class="btn btn-secondary">Load Saved</button>
-            <button id="btn-save" class="btn btn-accent">Save Config</button>
+            <button id="btn-load" class="btn btn-secondary">load</button>
+            <button id="btn-save" class="btn btn-accent">save</button>
           </div>
-          <button id="btn-activate" class="btn btn-primary btn-glow btn-large">ACTIVATE CONFIG</button>
+          <button id="btn-activate" class="btn btn-primary btn-large">activate</button>
         </div>
       </div>
 
-      <!-- Get Script Panel -->
+      <!-- Get Script -->
       <div class="glass-card script-card">
         <div class="card-header">
-          <h2>Get Script</h2>
-          <span id="script-status" class="save-status-text">Ready to generate</span>
+          <h2>get script</h2>
+          <span id="script-status" class="save-status-text">ready</span>
         </div>
-        <p class="script-info-text">Click the button below to generate your personal loader script. It will automatically connect to the WebSocket with your key, load your config, and execute the main script source.</p>
+        <p class="script-info-text">generates your loader script. connects to ws, loads your config from the site, then runs the main script.</p>
         <div class="key-display-area">
-          <span class="key-label">Your License Key:</span>
-          <span id="license-key-display" class="key-value">Loading...</span>
-          <button id="btn-copy-key" class="btn btn-secondary btn-small">Copy Key</button>
+          <span class="key-label">key:</span>
+          <span id="license-key-display" class="key-value">...</span>
+          <button id="btn-copy-key" class="btn btn-secondary btn-small">copy</button>
         </div>
         <div class="script-actions">
-          <button id="btn-get-script" class="btn btn-primary btn-glow btn-large">GET SCRIPT</button>
-          <button id="btn-copy-script" class="btn btn-accent btn-large hidden">COPY SCRIPT</button>
+          <button id="btn-get-script" class="btn btn-primary btn-large">get script</button>
+          <button id="btn-copy-script" class="btn btn-accent btn-large hidden">copy script</button>
         </div>
         <div id="script-preview-area" class="hidden">
-          <textarea id="script-preview" spellcheck="false" readonly placeholder="Your loader script will appear here..."></textarea>
+          <textarea id="script-preview" spellcheck="false" readonly></textarea>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- Settings Panel (Logo Customization Modal) -->
+  <!-- Settings Modal -->
   <div id="settings-modal" class="settings-modal hidden">
     <div class="glass-card settings-card">
       <div class="settings-header">
-        <h3>Custom Branding Settings</h3>
+        <h3>settings</h3>
         <button id="btn-close-settings" class="btn-close">&times;</button>
       </div>
       <div class="settings-body" style="text-align: left;">
         <div class="input-group">
           <input type="text" id="setting-logo-url" placeholder=" ">
-          <label for="setting-logo-url">Custom Logo Image URL</label>
+          <label for="setting-logo-url">logo url</label>
         </div>
-        <p class="settings-hint">Alternatively, you can just save a local image file named <code>logo.png</code> inside the <code>public</code> directory to use it automatically.</p>
-        <button id="btn-save-settings" class="btn btn-primary btn-glow" style="width: 100%;">Apply Logo</button>
+        <p class="settings-hint">or put <code>logo.png</code> in the <code>public</code> folder.</p>
+        <button id="btn-save-settings" class="btn btn-primary" style="width: 100%;">apply</button>
       </div>
     </div>
   </div>
 
-  <!-- Floating toast system -->
   <div id="toast-container" class="toast-area"></div>
-
   <script src="app.js"></script>
 </body>
 </html>
