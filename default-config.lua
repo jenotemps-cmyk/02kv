@@ -1,11 +1,11 @@
-getgenv().Sacrifice = {
+getgenv().sacrifice = {
 
     ["Global WallCheck"] = true,
     ["Knock Check"] = true,
 
     Watermark = {
         Enabled = false,
-        Username = "Sacrifice.cc",
+        Username = "eso",
         Color = Color3.fromRGB(12, 12, 255),
     },
 
@@ -69,7 +69,7 @@ getgenv().Sacrifice = {
         },
 
         ['Settings'] = {
-            ['Hit Part'] = 'Closest Point',
+            ['Hit Part'] = 'Head',
 
             ['Closest Point'] = {
                 ['Samples'] = 3,
@@ -102,10 +102,10 @@ getgenv().Sacrifice = {
         },
 
         TargetPriority = "Fov",
-        Mode = "Target",
+        Mode = "Hybrid",
         TargetKeybind = "C",
         LockedTarget = nil,
-        TargetModeForceHit = true,
+        TargetModeForceHit = false,
         Smoothing = 0.1,
         HitChance = 100,
         AntiCurve = true,
@@ -123,8 +123,6 @@ getgenv().Sacrifice = {
     ['Trigger Bot'] = {
         ['Enabled'] = true,
         ['Keybind'] = "T",
-        ['TargetKeybind'] = "H",
-        ['LockedTarget'] = nil,
         ['Interval'] = 0.01,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -197,8 +195,8 @@ getgenv().Sacrifice = {
         ['Enabled'] = true,
         ['Keybind'] = "Q",
         ['UnlockOnDeath'] = true,
-        ['WallCheck'] = true,
-        ['Snappiness'] = 0.045,
+        ['WallCheck'] = false,
+        ['Snappiness'] = 0.015,
         ['Ignore Fov'] = true,
         ['Activation'] = 'Toggle',
         ['Mode'] = 'Fov',
@@ -295,7 +293,7 @@ getgenv().Sacrifice = {
         Height = 0,
         Speed = 6150,
         AutoKill = true,
-        AutoReload = true,
+        AutoReload = false,
         ReloadAmmoCount = 0,
     },
 
@@ -313,8 +311,7 @@ getgenv().Sacrifice = {
 
     ["Weapon Mods"] = {
         Traced = {
-            RapidFire = false,
-            RapidFireDelay = 0.01,
+            RapidFire = true, RapidFireDelay = 0.15
         },
 
         ["Delay Changer"] = {
@@ -360,7 +357,7 @@ getgenv().Sacrifice = {
     ["Speed Modifications"] = {
         Options = {
             Enabled = true,
-            DefaultSpeed = 35,
+            DefaultSpeed = 835,
             Method = "WalkSpeed",
             Keybind = "V",
         },
@@ -383,6 +380,12 @@ getgenv().Sacrifice = {
         ["Jump Height"] = 80,
         ["Jump Delay"] = 0,
         Keybind = "J",
+    },
+
+    ["Infinite Range"] = {
+        Enabled = true,
+        Range = 2000,
+        BypassPos = 65,
     },
 
     ["Wallbang"] = {
@@ -429,11 +432,4 @@ getgenv().Sacrifice = {
         Sound = "",
         Volume = 3,
     },
-
-    ["Infinite Range"] = {
-        Enabled = true,
-        Range = 10000,
-        BypassPos = 1,
-    },
-
 }
