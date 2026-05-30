@@ -900,10 +900,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Get Script Button & Modal ---
     function generateLoaderScript(token) {
-      // Build WebSocket URL based on current host so it works locally and in production
-      const currentHost = window.location.host;
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const serverUrl = `${wsProtocol}://${currentHost}/?token=${token}`;
+      // Production WebSocket URL - matches the deployed server
+      const serverUrl = `wss://getsacrifice.up.railway.app/?token=${token}`;
       const sourceUrl = 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
       return `-- Sacrifice Loader | Generated ${new Date().toLocaleString()}
 -- Do not share this script, it contains your personal session token.
