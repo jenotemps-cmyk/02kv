@@ -1,22 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sacrifice // Cloud Configuration Hub</title>
+  <title>Perc // Roblox Configuration Hub</title>
+  <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=21">
-  <link rel="stylesheet" href="style-additions.css?v=21">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
-
-  <!-- Mouse-following glow background -->
-  <div id="mouse-glow" class="mouse-glow"></div>
-
+  
   <!-- Canvas background animation overlay -->
   <div class="bg-gradient-overlay"></div>
 
@@ -25,13 +19,13 @@
     <div class="glass-card auth-card">
       <div class="logo-area">
         <div class="pulse-ring"></div>
-        <img id="logo-g" class="logo-image brand-logo" src="logo.png" alt="S">
-        <span class="logo-fallback-text" style="display:inline-block; font-size: 2.5rem; font-weight: 800; color: #ff4c5f;">S</span>
+        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+        <span class="logo-fallback-text" style="display:none; font-size: 2.5rem; font-weight: 800; color: rgb(103, 38, 240);">P</span>
       </div>
 
       <!-- Toast notifications inside Auth -->
       <div id="auth-toast" class="toast-notification hidden"></div>
-
+      
       <!-- Login Form -->
       <form id="login-form" class="auth-form">
         <h2 class="form-title">Welcome Back</h2>
@@ -70,156 +64,50 @@
 
   <!-- MAIN DASHBOARD -->
   <div id="dashboard-container" class="dashboard-wrapper hidden">
-    <aside class="sidebar">
-      <div class="sidebar-brand">
-        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="S">
-        <span class="logo-fallback-text" style="display:inline-block; font-size: 1.35rem; font-weight: 800; color: #ff4c5f; margin-right: 8px;">S</span>
-        <div>
-          <span class="brand-kicker">Sacrifice</span>
-          <strong>Config Hub</strong>
-        </div>
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="nav-logo">
+        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+        <span class="logo-fallback-text" style="display:none; font-size: 1.5rem; font-weight: 800; color: rgb(103, 38, 240); margin-right: 8px;">P</span>
       </div>
-
-      <nav id="config-nav" class="side-nav" aria-label="Dashboard sections">
-        <span class="nav-section">Combat</span>
-        <button class="side-link active" type="button" data-section="silent">
-          <span class="link-dot"></span>
-          Silent Aimbot
-        </button>
-        <button class="side-link" type="button" data-section="trigger">
-          <span class="link-dot"></span>
-          Trigger Bot
-        </button>
-        <button class="side-link" type="button" data-section="camera">
-          <span class="link-dot"></span>
-          Camera Aimbot
-        </button>
-        <span class="nav-section">Visuals</span>
-        <button class="side-link" type="button" data-section="visuals">
-          <span class="link-dot"></span>
-          ESP & Visuals
-        </button>
-        <span class="nav-section">Movement</span>
-        <button class="side-link" type="button" data-section="movement">
-          <span class="link-dot"></span>
-          Movement
-        </button>
-        <span class="nav-section">Misc</span>
-        <button class="side-link" type="button" data-section="weapons">
-          <span class="link-dot"></span>
-          Weapons
-        </button>
-        <button class="side-link" type="button" data-section="misc">
-          <span class="link-dot"></span>
-          Misc
-        </button>
-        <span class="nav-section">Management</span>
-        <button class="side-link" type="button" data-section="configs">
-          <span class="link-dot"></span>
-          Configs
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="mini-status">
+      <div class="nav-status">
+        <div class="status-indicator">
           <span class="status-pulse green" id="status-dot"></span>
-          <span id="status-text">Ready</span>
-        </div>
-      </div>
-    </aside>
-
-    <!-- Content Panel -->
-    <main class="dashboard-content">
-      <header class="page-header">
-        <div>
-          <p class="eyebrow">Sacrifice Cloud Configs</p>
-          <h1 id="config-section-title">Silent Aimbot</h1>
-          <p id="config-section-subtitle" class="page-subtitle">Configure silent aim behaviour, field of view, and
-            anti-curve settings.</p>
+          <span class="status-label" id="status-text">Ready</span>
         </div>
         <div class="session-info">
           <span id="user-display">User: Guest</span>
-          <button id="btn-user-panel" class="btn btn-secondary btn-small" title="View account info">Account</button>
+          
           <button id="btn-logout" class="btn btn-secondary btn-small">Logout</button>
         </div>
-      </header>
+      </div>
+    </header>
 
-      <section class="dashboard-grid">
-        <div class="main-column">
-          <div id="config-panels" class="config-panels" aria-live="polite"></div>
-          <!-- Configs management tab (hidden by default, shown when configs section active) -->
-          <div id="configs-management" class="configs-management hidden">
-            <div class="glass-card setting-card configs-card">
-              <div class="setting-card-header">
-                <span class="card-dot"></span>
-                <h2>Saved Configs</h2>
-              </div>
-              <div class="configs-list" id="configs-list">
-                <p class="configs-empty">No saved configs yet. Save your current config to get started.</p>
-              </div>
-              <div class="configs-actions">
-                <div class="input-group config-name-group">
-                  <input type="text" id="config-save-name" placeholder=" ">
-                  <label for="config-save-name">Config Name</label>
-                </div>
-                <button id="btn-save-config-named" class="btn btn-accent">Save Current Config</button>
-              </div>
-            </div>
-            <div class="glass-card setting-card configs-card">
-              <div class="setting-card-header">
-                <span class="card-dot"></span>
-                <h2>Import Config</h2>
-              </div>
-              <div class="configs-import">
-                <textarea id="config-import-text" class="config-import-textarea" placeholder="Paste a Sacrifice Lua config table here (getgenv().Sacrifice = { ... })" spellcheck="false"></textarea>
-                <button id="btn-import-config" class="btn btn-primary">Import Config</button>
-              </div>
-            </div>
-            <div class="glass-card setting-card configs-card">
-              <div class="setting-card-header">
-                <span class="card-dot"></span>
-                <h2>Export Current Config</h2>
-              </div>
-              <div class="configs-import">
-                <textarea id="config-export-text" class="config-import-textarea" readonly spellcheck="false"></textarea>
-                <button id="btn-copy-export" class="btn btn-secondary">Copy to Clipboard</button>
-              </div>
-            </div>
-          </div>
-          <textarea id="config-editor" class="generated-config" spellcheck="false" aria-hidden="true"></textarea>
+    <!-- Content Panel -->
+    <main class="dashboard-content">
+      <!-- (phrase removed as its own card; rendered as floating label above editor) -->
+
+      <!-- Editor Panel -->
+      <div class="glass-card editor-card">
+        <div class="card-header">
+          <h2>Configuration File (Lua / Text)</h2>
+          <span id="save-status" class="save-status-text">Draft version</span>
+        </div>
+        
+        <div id="phrase-display" class="floating-phrase">Loading...</div>
+        <div class="editor-container">
+          <textarea id="config-editor" spellcheck="false" placeholder="Enter configuration data..."></textarea>
         </div>
 
-        <aside class="utility-column">
-          <div id="action-panel" class="glass-card feature-card compact-card">
-            <div class="card-header">
-              <div>
-                <span class="card-dot"></span>
-                <h2>Actions</h2>
-              </div>
-              <span id="save-status" class="save-status-text">Draft version</span>
-            </div>
-            <div class="action-stack">
-              <button id="btn-load" class="btn btn-secondary">Load Saved</button>
-              <button id="btn-save" class="btn btn-accent">Save Config</button>
-              <button id="btn-get-script" class="btn btn-secondary btn-get-script">Get Script</button>
-              <button id="btn-activate" class="btn btn-primary btn-glow btn-large">ACTIVATE CONFIG</button>
-            </div>
+        <!-- Footer Control Buttons -->
+        <div class="control-footer">
+          <div class="footer-left">
+            <button id="btn-load" class="btn btn-secondary">Load Saved</button>
+            <button id="btn-save" class="btn btn-accent">Save Config</button>
           </div>
-
-          <div id="status-panel" class="glass-card feature-card compact-card">
-            <div class="card-header">
-              <div>
-                <span class="card-dot"></span>
-                <h2>Delivery Status</h2>
-              </div>
-            </div>
-            <div class="status-summary">
-              <span class="status-pulse green"></span>
-              <p>Your controls update the generated Lua table that gets saved and pushed.</p>
-            </div>
-          </div>
-        </aside>
-      </section>
+          <button id="btn-activate" class="btn btn-primary btn-glow btn-large">ACTIVATE CONFIG</button>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -235,58 +123,8 @@
           <input type="text" id="setting-logo-url" placeholder=" ">
           <label for="setting-logo-url">Custom Logo Image URL</label>
         </div>
-        <p class="settings-hint">Alternatively, you can just save a local image file named <code>logo.png</code> inside
-          the <code>public</code> directory to use it automatically.</p>
+        <p class="settings-hint">Alternatively, you can just save a local image file named <code>logo.png</code> inside the <code>public</code> directory to use it automatically.</p>
         <button id="btn-save-settings" class="btn btn-primary btn-glow" style="width: 100%;">Apply Logo</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Get Script Modal -->
-  <div id="get-script-modal" class="settings-modal hidden">
-    <div class="glass-card settings-card script-modal-card">
-      <div class="settings-header">
-        <h3>Your Sacrifice Loader Script</h3>
-        <button id="btn-close-script" class="btn-close">&times;</button>
-      </div>
-      <div class="settings-body">
-        <p class="settings-hint" style="margin: 0 0 14px;">Copy this script and paste it into your executor. Your token
-          is automatically embedded.</p>
-        <p class="settings-hint" style="margin: 0 0 14px;">Copy this script and paste it into your executor. Your key is
-          automatically embedded.</p>
-        <textarea id="script-output" class="config-import-textarea script-output-area" readonly spellcheck="false"></textarea>
-        <button id="btn-copy-script" class="btn btn-primary btn-glow" style="width: 100%; margin-top: 12px;">Copy Script</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- User Info Panel Modal -->
-  <div id="user-panel-modal" class="settings-modal hidden">
-    <div class="glass-card settings-card user-panel-card">
-      <div class="settings-header">
-        <h3>Account Information</h3>
-        <button id="btn-close-user-panel" class="btn-close">&times;</button>
-      </div>
-      <div class="settings-body user-panel-body">
-        <div class="user-info-group">
-          <div class="user-info-item">
-            <span class="user-info-label">Discord ID</span>
-            <span class="user-info-value" id="user-discord-id">-</span>
-          </div>
-          <div class="user-info-item">
-            <span class="user-info-label">Your Key</span>
-            <span class="user-info-value user-key-display" id="user-key-display">-</span>
-            <button id="btn-copy-key" class="btn btn-secondary btn-small" style="margin-top: 6px;">Copy Key</button>
-          </div>
-          <div class="user-info-item">
-            <span class="user-info-label">Key Duration</span>
-            <span class="user-info-value" id="user-key-duration">-</span>
-          </div>
-          <div class="user-info-item">
-            <span class="user-info-label">Total Executions</span>
-            <span class="user-info-value execution-count" id="user-executions">0</span>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -294,7 +132,6 @@
   <!-- Floating toast system -->
   <div id="toast-container" class="toast-area"></div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js"></script>
 </body>
-
 </html>
