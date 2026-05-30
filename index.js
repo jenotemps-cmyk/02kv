@@ -952,26 +952,22 @@ app.get('/api/user-info', authenticateToken, (req, res) => {
 app.get('/api/script', authenticateToken, (req, res) => {
   const token = req.cookies.token;
   const username = req.user.username;
-  const licenseKey = req.user.license || '';
 
   // Build the WebSocket URL the loader will connect to
-  // We use the host header so it works regardless of deployment
   const host = req.get('host');
   const wsProtocol = req.secure || req.get('x-forwarded-proto') === 'https' ? 'wss' : 'ws';
   const wsUrl = `${wsProtocol}://${host}?token=${token}`;
 
-  // Build the HTTP URL for fetching the main script source
-  const httpProtocol = req.secure || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-  const httpUrl = `${httpProtocol}://${host}`;
+  // The main script source URL (configurable via env or default)
+  const scriptUrl = process.env.SCRIPT_URL || 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
 
   const loaderScript = `-- Sacrifice Loader | User: ${username}
 -- Auto-generated loader - paste this into your executor
 
 local WEBSOCKET_URL = "${wsUrl}"
-local SERVER_URL = "${httpUrl}"
-local AUTH_TOKEN = "${token}"
+local SCRIPT_URL = "${scriptUrl}"
 
--- Connect to WebSocket and receive config, then load the main script
+-- Connect to WebSocket, receive config, then execute the main script
 local function main()
     local WebSocket = syn and syn.websocket or (WebSocket and WebSocket) or (http and http.websocket)
     
@@ -1015,14 +1011,23 @@ local function main()
         Duration = 3
     })
 
-    local configReceived = false
-    local configData = nil
-
+    -- Listen for config messages from WebSocket
     ws.OnMessage:Connect(function(message)
         local data = game:GetService("HttpService"):JSONDecode(message)
         if data.type == "init" or data.type == "update" then
-            configData = data.config
-            configReceived = true
+            -- Apply the config from the website
+            local configSuccess, configErr = pcall(function()
+                loadstring(data.config)()
+            end)
+            if configSuccess then
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "Sacrifice",
+                    Text = "Config applied from web!",
+                    Duration = 3
+                })
+            else
+                warn("[Sacrifice] Failed to load config: " .. tostring(configErr))
+            end
         end
     end)
 
@@ -1034,59 +1039,25 @@ local function main()
         })
     end)
 
-    -- Wait for config with timeout
-    local timeout = 10
-    local start = tick()
-    while not configReceived and (tick() - start) < timeout do
-        task.wait(0.5)
-    end
+    -- Wait briefly for initial config to arrive
+    task.wait(2)
 
-    if not configReceived then
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Sacrifice",
-            Text = "Config receive timed out, using default",
-            Duration = 3
-        })
-    end
-
-    -- Apply the config
-    if configData then
-        local configSuccess, configErr = pcall(function()
-            loadstring(configData)()
-        end)
-        if not configSuccess then
-            warn("[Sacrifice] Failed to load config: " .. tostring(configErr))
-        end
-    end
-
-    -- Load the main script source
-    local HttpService = game:GetService("HttpService")
-    local scriptSuccess, scriptSource = pcall(function()
-        return HttpService:GetAsync(SERVER_URL .. "/api/main-script?token=" .. AUTH_TOKEN)
+    -- Now load and execute the main script source
+    -- The config (getgenv().sacrifice) is already set from the WebSocket
+    local scriptSuccess, scriptErr = pcall(function()
+        loadstring(game:HttpGet(SCRIPT_URL))()
     end)
 
-    if scriptSuccess and scriptSource then
-        local execSuccess, execErr = pcall(function()
-            loadstring(scriptSource)()
-        end)
-        if not execSuccess then
-            warn("[Sacrifice] Failed to execute main script: " .. tostring(execErr))
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Sacrifice",
-                Text = "Failed to execute script!",
-                Duration = 5
-            })
-        end
-    else
-        warn("[Sacrifice] Failed to fetch main script source")
+    if not scriptSuccess then
+        warn("[Sacrifice] Failed to execute main script: " .. tostring(scriptErr))
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Sacrifice",
-            Text = "Failed to fetch script source!",
+            Text = "Failed to execute script!",
             Duration = 5
         })
     end
 
-    -- Keep WebSocket alive for live config updates
+    -- Keep WebSocket alive for live config updates from the website
     spawn(function()
         while ws and ws.CloseCode == nil do
             task.wait(1)
@@ -1098,44 +1069,6 @@ main()`;
 
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   return res.send(loaderScript);
-});
-
-// Serve the main Roblox script source (from default-config.lua as the base)
-// Accepts auth via cookie OR token query param (for executor HTTP requests)
-app.get('/api/main-script', (req, res, next) => {
-  let token = req.cookies.token;
-  
-  // Fallback: check for token in query string
-  if (!token && req.query.token) {
-    token = req.query.token;
-  }
-
-  if (!token) {
-    return res.status(401).send('-- Error: Authentication required');
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).send('-- Error: Invalid or expired token');
-    }
-
-    const db = readLocalDB();
-    const localUser = db.find(u => u.username.toLowerCase() === user.username.toLowerCase());
-    if (!localUser || localUser.banned) {
-      return res.status(403).send('-- Error: Account not found or banned');
-    }
-
-    // Read the main script source file if it exists (stored outside public/ so it's not served statically)
-    const scriptPath = path.join(__dirname, 'main-script.lua');
-    if (fs.existsSync(scriptPath)) {
-      const scriptSource = fs.readFileSync(scriptPath, 'utf8');
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      return res.send(scriptSource);
-    }
-    // Fallback: if no main-script.lua exists yet, return a minimal stub
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    return res.send('-- Main Sacrifice script source\n-- Place your main Roblox script in main-script.lua (project root)\nprint("[Sacrifice] Config loaded from web hub")\nprint("[Sacrifice] Main script source not found - create main-script.lua")');
-  });
 });
 
 // Serve static frontend files from 'public' directory after API routes.
