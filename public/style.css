@@ -1,12 +1,14 @@
 :root {
-  --bg: #0a0a0a;
-  --bg2: #111;
-  --bg3: #1a1a1a;
+  --bg: #0d0d0d;
+  --bg2: #151515;
+  --bg3: #1c1c1c;
   --red: #ff3048;
-  --red-dim: #cc2639;
-  --text: #e0e0e0;
-  --text2: #888;
-  --border: #2a2a2a;
+  --red-dim: #d92738;
+  --red-dark: #b01f2e;
+  --text: #e8e8e8;
+  --text2: #8a8a8a;
+  --text3: #5a5a5a;
+  --border: #252525;
   --mono: 'JetBrains Mono', monospace;
   --sans: 'Outfit', sans-serif;
 }
@@ -67,22 +69,32 @@ body {
   justify-content: center;
   width: 64px;
   height: 64px;
-  background: #000;
+  background: linear-gradient(135deg, #1a0000 0%, #000 100%);
   color: var(--red) !important;
-  font-size: 2.2rem !important;
+  font-size: 2.8rem !important;
   font-weight: 900 !important;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 2px solid var(--red);
   font-family: var(--sans);
+  box-shadow: 0 0 20px rgba(255, 48, 72, 0.3);
+  letter-spacing: -2px;
 }
 
 .nav-brand-logo { display: none !important; }
 .nav-brand-logo + .logo-fallback-text {
-  width: 28px;
-  height: 28px;
-  font-size: 1.1rem !important;
-  border-radius: 3px;
-  margin-right: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 1.3rem !important;
+  border-radius: 4px;
+  margin-right: 10px;
+  box-shadow: 0 0 12px rgba(255, 48, 72, 0.2);
+}
+
+.brand-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
 }
 
 .pulse-ring { display: none; }
@@ -563,4 +575,138 @@ body {
   }
   .footer-left { flex-direction: column; }
   .script-actions { flex-direction: column; }
+}
+
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  gap: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-btn.active {
+  background: var(--red);
+  color: #fff;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Config Editor Styles */
+.config-card {
+  padding: 24px;
+}
+
+.config-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.config-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 20px;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--red);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
+.config-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: var(--mono);
+  outline: none;
+}
+
+.config-input:focus {
+  border-color: var(--red);
+}
+
+.config-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+  .config-actions {
+    flex-direction: column;
+  }
+  .tab-navigation {
+    flex-direction: column;
+  }
 }
