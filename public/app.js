@@ -3,6 +3,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const authContainer = document.getElementById('auth-container');
   const dashboardContainer = document.getElementById('dashboard-container');
   
+  // Tab switching
+  const tabBtns = document.querySelectorAll('.tab-btn');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.dataset.tab;
+      
+      // Remove active from all tabs
+      tabBtns.forEach(b => b.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      
+      // Add active to clicked tab
+      btn.classList.add('active');
+      document.getElementById(`tab-${targetTab}`).classList.add('active');
+    });
+  });
+  
   // Form toggles
   const toSignup = document.getElementById('to-signup');
   const toLogin = document.getElementById('to-login');
@@ -564,5 +582,168 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       showToast('Logout connection error', 'error');
     }
+  });
+});
+
+  // --- Visual Config Editor (Config Tab) ---
+  const btnApplyConfig = document.getElementById('btn-apply-config');
+  const btnResetConfig = document.getElementById('btn-reset-config');
+
+  // Config input elements
+  const cfgSilentEnabled = document.getElementById('cfg-silent-enabled');
+  const cfgSilentHitchance = document.getElementById('cfg-silent-hitchance');
+  const cfgSilentFov = document.getElementById('cfg-silent-fov');
+  const cfgCamlockEnabled = document.getElementById('cfg-camlock-enabled');
+  const cfgCamlockSmooth = document.getElementById('cfg-camlock-smooth');
+  const cfgCamlockPredx = document.getElementById('cfg-camlock-predx');
+  const cfgEspEnabled = document.getElementById('cfg-esp-enabled');
+  const cfgEspSize = document.getElementById('cfg-esp-size');
+  const cfgWatermarkEnabled = document.getElementById('cfg-watermark-enabled');
+
+  // Parse current config from editor and populate visual editor
+  function loadVisualConfig() {
+    try {
+      const configText = configEditor.value;
+      
+      // Simple parsing - look for specific patterns
+      // Silent Aim Enabled
+      if (configText.includes("['Silent Aim'] = {") && configText.includes("['Enabled'] = true")) {
+        cfgSilentEnabled.checked = true;
+      }
+      
+      // Hit Chance
+      const hitchanceMatch = configText.match(/HitChance\s*=\s*(\d+)/);
+      if (hitchanceMatch) {
+        cfgSilentHitchance.value = hitchanceMatch[1];
+      }
+      
+      // FOV Radius
+      const fovMatch = configText.match(/['"]Radius['"]\s*=\s*(\d+)/);
+      if (fovMatch) {
+        cfgSilentFov.value = fovMatch[1];
+      }
+      
+      // Camlock Enabled
+      if (configText.includes("['Camlock'] = {") && configText.includes("['Enabled'] = true")) {
+        cfgCamlockEnabled.checked = true;
+      }
+      
+      // Camlock Smoothness (Blend)
+      const blendMatch = configText.match(/['"]Blend['"]\s*=\s*([\d.]+)/);
+      if (blendMatch) {
+        cfgCamlockSmooth.value = blendMatch[1];
+      }
+      
+      // Camlock Prediction X
+      const predxMatch = configText.match(/['"]x['"]\s*=\s*([\d.]+)/);
+      if (predxMatch) {
+        cfgCamlockPredx.value = predxMatch[1];
+      }
+      
+      // ESP Enabled
+      if (configText.includes("ESP = {") && configText.includes("Enabled = true")) {
+        cfgEspEnabled.checked = true;
+      }
+      
+      // ESP Size
+      const espSizeMatch = configText.match(/Size\s*=\s*(\d+)/);
+      if (espSizeMatch) {
+        cfgEspSize.value = espSizeMatch[1];
+      }
+      
+      // Watermark Enabled
+      if (configText.includes("Watermark = {") && configText.includes("Enabled = true")) {
+        cfgWatermarkEnabled.checked = true;
+      }
+      
+      showToast('Visual config loaded from editor', 'info');
+    } catch (err) {
+      showToast('Failed to parse config for visual editor', 'error');
+    }
+  }
+
+  // Apply visual config changes back to the text editor
+  if (btnApplyConfig) {
+    btnApplyConfig.addEventListener('click', () => {
+      try {
+        let configText = configEditor.value;
+        
+        // Update Silent Aim Enabled
+        configText = configText.replace(
+          /(Silent Aim.*?\[['"]Enabled['"]\]\s*=\s*)(true|false)/s,
+          `$1${cfgSilentEnabled.checked}`
+        );
+        
+        // Update Hit Chance
+        configText = configText.replace(
+          /HitChance\s*=\s*\d+/g,
+          `HitChance = ${cfgSilentHitchance.value}`
+        );
+        
+        // Update FOV Radius
+        configText = configText.replace(
+          /(['"]Radius['"]\s*=\s*)\d+/g,
+          `$1${cfgSilentFov.value}`
+        );
+        
+        // Update Camlock Enabled
+        configText = configText.replace(
+          /(Camlock.*?\[['"]Enabled['"]\]\s*=\s*)(true|false)/s,
+          `$1${cfgCamlockEnabled.checked}`
+        );
+        
+        // Update Camlock Blend
+        configText = configText.replace(
+          /(['"]Blend['"]\s*=\s*)[\d.]+/g,
+          `$1${cfgCamlockSmooth.value}`
+        );
+        
+        // Update ESP Enabled
+        configText = configText.replace(
+          /(ESP\s*=\s*\{[^}]*Enabled\s*=\s*)(true|false)/s,
+          `$1${cfgEspEnabled.checked}`
+        );
+        
+        // Update ESP Size
+        configText = configText.replace(
+          /(ESP[^}]*Size\s*=\s*)\d+/s,
+          `$1${cfgEspSize.value}`
+        );
+        
+        // Update Watermark Enabled
+        configText = configText.replace(
+          /(Watermark\s*=\s*\{[^}]*Enabled\s*=\s*)(true|false)/s,
+          `$1${cfgWatermarkEnabled.checked}`
+        );
+        
+        configEditor.value = configText;
+        saveStatus.textContent = 'Modified (unsaved)';
+        showToast('Visual changes applied to editor! Click SAVE to persist.', 'success');
+      } catch (err) {
+        showToast('Failed to apply visual config changes', 'error');
+      }
+    });
+  }
+
+  if (btnResetConfig) {
+    btnResetConfig.addEventListener('click', () => {
+      if (confirm('Reset all visual config values to defaults?')) {
+        cfgSilentEnabled.checked = true;
+        cfgSilentHitchance.value = 100;
+        cfgSilentFov.value = 150;
+        cfgCamlockEnabled.checked = true;
+        cfgCamlockSmooth.value = 0.15;
+        cfgCamlockPredx.value = 0.125;
+        cfgEspEnabled.checked = true;
+        cfgEspSize.value = 11;
+        cfgWatermarkEnabled.checked = true;
+        showToast('Visual config reset to defaults', 'info');
+      }
+    });
+  }
+
+  // Load visual config when switching to config tab
+  document.querySelector('[data-tab="config"]').addEventListener('click', () => {
+    setTimeout(loadVisualConfig, 100);
   });
 });
