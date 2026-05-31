@@ -112,57 +112,139 @@
         <div class="glass-card config-card">
           <div class="card-header">
             <h2>visual config editor</h2>
-            <span class="save-status-text">coming soon</span>
+            <span id="config-status" class="save-status-text">ready</span>
           </div>
           <div class="config-sections">
+            
+            <!-- Silent Aim -->
             <div class="config-section">
               <h3 class="section-title">silent aim</h3>
               <div class="config-grid">
                 <div class="config-item">
                   <label class="config-label">
-                    <input type="checkbox" id="cfg-silent-enabled">
+                    <input type="checkbox" id="cfg-silent-enabled" checked>
                     <span>enabled</span>
                   </label>
                 </div>
                 <div class="config-item">
-                  <label class="config-label">hit chance</label>
+                  <label class="config-label">hit chance (%)</label>
                   <input type="number" id="cfg-silent-hitchance" class="config-input" min="0" max="100" value="100">
                 </div>
                 <div class="config-item">
                   <label class="config-label">fov radius</label>
-                  <input type="number" id="cfg-silent-fov" class="config-input" min="0" max="500" value="150">
+                  <input type="number" id="cfg-silent-fov" class="config-input" min="0" max="1000" value="350">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-silent-fov-visible">
+                    <span>show fov circle</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hit part</label>
+                  <select id="cfg-silent-hitpart" class="config-input">
+                    <option value="Head">Head</option>
+                    <option value="UpperTorso">Upper Torso</option>
+                    <option value="LowerTorso">Lower Torso</option>
+                    <option value="Closest" selected>Closest</option>
+                  </select>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">smoothing</label>
+                  <input type="number" id="cfg-silent-smoothing" class="config-input" min="0" max="1" step="0.01" value="0.1">
                 </div>
               </div>
             </div>
 
+            <!-- Camlock -->
             <div class="config-section">
               <h3 class="section-title">camlock</h3>
               <div class="config-grid">
                 <div class="config-item">
                   <label class="config-label">
-                    <input type="checkbox" id="cfg-camlock-enabled">
+                    <input type="checkbox" id="cfg-camlock-enabled" checked>
                     <span>enabled</span>
                   </label>
                 </div>
                 <div class="config-item">
-                  <label class="config-label">smoothness</label>
-                  <input type="number" id="cfg-camlock-smooth" class="config-input" min="0" max="1" step="0.01" value="0.15">
+                  <label class="config-label">keybind</label>
+                  <input type="text" id="cfg-camlock-keybind" class="config-input" value="Q" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">blend (smoothness)</label>
+                  <input type="number" id="cfg-camlock-blend" class="config-input" min="0" max="1" step="0.01" value="0.17">
                 </div>
                 <div class="config-item">
                   <label class="config-label">prediction x</label>
                   <input type="number" id="cfg-camlock-predx" class="config-input" min="0" max="1" step="0.001" value="0.125">
                 </div>
+                <div class="config-item">
+                  <label class="config-label">prediction y</label>
+                  <input type="number" id="cfg-camlock-predy" class="config-input" min="0" max="1" step="0.001" value="0.225">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">prediction z</label>
+                  <input type="number" id="cfg-camlock-predz" class="config-input" min="0" max="1" step="0.001" value="0.125">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hit part</label>
+                  <select id="cfg-camlock-hitpart" class="config-input">
+                    <option value="Head">Head</option>
+                    <option value="UpperTorso" selected>Upper Torso</option>
+                    <option value="LowerTorso">Lower Torso</option>
+                  </select>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-camlock-shake" checked>
+                    <span>shake enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">shake x</label>
+                  <input type="number" id="cfg-camlock-shakex" class="config-input" min="0" max="5" step="0.1" value="0.5">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">shake y</label>
+                  <input type="number" id="cfg-camlock-shakey" class="config-input" min="0" max="5" step="0.1" value="0.5">
+                </div>
               </div>
             </div>
 
+            <!-- Trigger Bot -->
+            <div class="config-section">
+              <h3 class="section-title">trigger bot</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-trigger-enabled" checked>
+                    <span>enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">keybind</label>
+                  <input type="text" id="cfg-trigger-keybind" class="config-input" value="T" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">delay (seconds)</label>
+                  <input type="number" id="cfg-trigger-delay" class="config-input" min="0" max="1" step="0.01" value="0.01">
+                </div>
+              </div>
+            </div>
+
+            <!-- Visuals -->
             <div class="config-section">
               <h3 class="section-title">visuals</h3>
               <div class="config-grid">
                 <div class="config-item">
                   <label class="config-label">
-                    <input type="checkbox" id="cfg-esp-enabled">
+                    <input type="checkbox" id="cfg-esp-enabled" checked>
                     <span>esp enabled</span>
                   </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">esp keybind</label>
+                  <input type="text" id="cfg-esp-keybind" class="config-input" value="B" maxlength="1">
                 </div>
                 <div class="config-item">
                   <label class="config-label">esp size</label>
@@ -174,11 +256,155 @@
                     <span>watermark</span>
                   </label>
                 </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-sky-enabled" checked>
+                    <span>sky mod</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Speed & Movement -->
+            <div class="config-section">
+              <h3 class="section-title">speed & movement</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-speed-enabled" checked>
+                    <span>speed enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">speed keybind</label>
+                  <input type="text" id="cfg-speed-keybind" class="config-input" value="V" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">speed value</label>
+                  <input type="number" id="cfg-speed-value" class="config-input" min="16" max="1000" value="835">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-jump-enabled">
+                    <span>jump mod enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">jump power</label>
+                  <input type="number" id="cfg-jump-power" class="config-input" min="50" max="200" value="60">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">jump keybind</label>
+                  <input type="text" id="cfg-jump-keybind" class="config-input" value="H" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-spiderman-enabled" checked>
+                    <span>spiderman</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">spiderman keybind</label>
+                  <input type="text" id="cfg-spiderman-keybind" class="config-input" value="J" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">spiderman boost</label>
+                  <input type="number" id="cfg-spiderman-boost" class="config-input" min="0" max="200" value="80">
+                </div>
+              </div>
+            </div>
+
+            <!-- Weapon Mods -->
+            <div class="config-section">
+              <h3 class="section-title">weapon mods</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-rapidfire-enabled" checked>
+                    <span>rapid fire</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">rapid fire delay</label>
+                  <input type="number" id="cfg-rapidfire-delay" class="config-input" min="0" max="1" step="0.01" value="0.15">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-delay-changer-enabled" checked>
+                    <span>delay changer</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">global delay</label>
+                  <input type="number" id="cfg-global-delay" class="config-input" min="0" max="1" step="0.01" value="0.08">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-hitbox-enabled">
+                    <span>hitbox expander</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hitbox size</label>
+                  <input type="number" id="cfg-hitbox-size" class="config-input" min="1" max="200" value="110">
+                </div>
+              </div>
+            </div>
+
+            <!-- Misc -->
+            <div class="config-section">
+              <h3 class="section-title">misc</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-wallbang-enabled" checked>
+                    <span>wallbang</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-infiniterange-enabled" checked>
+                    <span>infinite range</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">range value</label>
+                  <input type="number" id="cfg-range-value" class="config-input" min="100" max="5000" value="2000">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-antistomp-enabled">
+                    <span>anti stomp</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-panicground-enabled" checked>
+                    <span>panic ground</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">panic keybind</label>
+                  <input type="text" id="cfg-panic-keybind" class="config-input" value="P" maxlength="1">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-globalwallcheck-enabled" checked>
+                    <span>global wall check</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-knockcheck-enabled" checked>
+                    <span>knock check</span>
+                  </label>
+                </div>
               </div>
             </div>
 
             <div class="config-actions">
-              <button id="btn-apply-config" class="btn btn-primary btn-large">apply changes</button>
+              <button id="btn-apply-config" class="btn btn-primary btn-large">apply to editor</button>
+              <button id="btn-save-visual-config" class="btn btn-accent btn-large">apply & save to cloud</button>
               <button id="btn-reset-config" class="btn btn-secondary">reset to defaults</button>
             </div>
           </div>
