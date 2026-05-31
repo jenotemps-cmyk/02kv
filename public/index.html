@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Perc</title>
+  <title>Sacrifice</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="style-additions.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,8 +16,8 @@
   <div id="auth-container" class="auth-wrapper">
     <div class="glass-card auth-card">
       <div class="logo-area">
-        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
-        <span class="logo-fallback-text" style="display:none;">P</span>
+        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="S" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none;">S</span>
       </div>
 
       <div id="auth-toast" class="toast-notification hidden"></div>
@@ -60,8 +60,9 @@
   <div id="dashboard-container" class="dashboard-wrapper hidden">
     <header class="navbar">
       <div class="nav-logo">
-        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="P" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
-        <span class="logo-fallback-text" style="display:none; margin-right: 8px;">P</span>
+        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="S" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none; margin-right: 8px;">S</span>
+        <span class="brand-name">sacrifice</span>
       </div>
       <div class="nav-status">
         <div class="status-indicator">
@@ -76,45 +77,134 @@
     </header>
 
     <main class="dashboard-content">
-      <!-- Config Editor -->
-      <div class="glass-card editor-card">
-        <div class="card-header">
-          <h2>config</h2>
-          <span id="save-status" class="save-status-text">draft</span>
-        </div>
-        
-        <div id="phrase-display" class="floating-phrase"></div>
-        <div class="editor-container">
-          <textarea id="config-editor" spellcheck="false" placeholder="config..."></textarea>
-        </div>
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="editor">editor</button>
+        <button class="tab-btn" data-tab="config">config</button>
+        <button class="tab-btn" data-tab="script">script</button>
+      </div>
 
-        <div class="control-footer">
-          <div class="footer-left">
-            <button id="btn-load" class="btn btn-secondary">load</button>
-            <button id="btn-save" class="btn btn-accent">save</button>
+      <!-- Editor Tab -->
+      <div class="tab-content active" id="tab-editor">
+        <div class="glass-card editor-card">
+          <div class="card-header">
+            <h2>lua editor</h2>
+            <span id="save-status" class="save-status-text">draft</span>
           </div>
-          <button id="btn-activate" class="btn btn-primary btn-large">activate</button>
+          
+          <div id="phrase-display" class="floating-phrase"></div>
+          <div class="editor-container">
+            <textarea id="config-editor" spellcheck="false" placeholder="-- paste your config here..."></textarea>
+          </div>
+
+          <div class="control-footer">
+            <div class="footer-left">
+              <button id="btn-load" class="btn btn-secondary">load</button>
+              <button id="btn-save" class="btn btn-accent">save</button>
+            </div>
+            <button id="btn-activate" class="btn btn-primary btn-large">activate</button>
+          </div>
         </div>
       </div>
 
-      <!-- Get Script -->
-      <div class="glass-card script-card">
-        <div class="card-header">
-          <h2>get script</h2>
-          <span id="script-status" class="save-status-text">ready</span>
+      <!-- Config Tab -->
+      <div class="tab-content" id="tab-config">
+        <div class="glass-card config-card">
+          <div class="card-header">
+            <h2>visual config editor</h2>
+            <span class="save-status-text">coming soon</span>
+          </div>
+          <div class="config-sections">
+            <div class="config-section">
+              <h3 class="section-title">silent aim</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-silent-enabled">
+                    <span>enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hit chance</label>
+                  <input type="number" id="cfg-silent-hitchance" class="config-input" min="0" max="100" value="100">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">fov radius</label>
+                  <input type="number" id="cfg-silent-fov" class="config-input" min="0" max="500" value="150">
+                </div>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3 class="section-title">camlock</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-camlock-enabled">
+                    <span>enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">smoothness</label>
+                  <input type="number" id="cfg-camlock-smooth" class="config-input" min="0" max="1" step="0.01" value="0.15">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">prediction x</label>
+                  <input type="number" id="cfg-camlock-predx" class="config-input" min="0" max="1" step="0.001" value="0.125">
+                </div>
+              </div>
+            </div>
+
+            <div class="config-section">
+              <h3 class="section-title">visuals</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-esp-enabled">
+                    <span>esp enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">esp size</label>
+                  <input type="number" id="cfg-esp-size" class="config-input" min="8" max="20" value="11">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-watermark-enabled">
+                    <span>watermark</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="config-actions">
+              <button id="btn-apply-config" class="btn btn-primary btn-large">apply changes</button>
+              <button id="btn-reset-config" class="btn btn-secondary">reset to defaults</button>
+            </div>
+          </div>
         </div>
-        <p class="script-info-text">generates your loader script. connects to ws, loads your config from the site, then runs the main script.</p>
-        <div class="key-display-area">
-          <span class="key-label">key:</span>
-          <span id="license-key-display" class="key-value">...</span>
-          <button id="btn-copy-key" class="btn btn-secondary btn-small">copy</button>
-        </div>
-        <div class="script-actions">
-          <button id="btn-get-script" class="btn btn-primary btn-large">get script</button>
-          <button id="btn-copy-script" class="btn btn-accent btn-large hidden">copy script</button>
-        </div>
-        <div id="script-preview-area" class="hidden">
-          <textarea id="script-preview" spellcheck="false" readonly></textarea>
+      </div>
+
+      <!-- Script Tab -->
+      <div class="tab-content" id="tab-script">
+        <div class="glass-card script-card">
+          <div class="card-header">
+            <h2>loader script</h2>
+            <span id="script-status" class="save-status-text">ready</span>
+          </div>
+          <p class="script-info-text">generates your loader script. connects to websocket, loads your config from the cloud, then executes the main script.</p>
+          <div class="key-display-area">
+            <span class="key-label">license:</span>
+            <span id="license-key-display" class="key-value">...</span>
+            <button id="btn-copy-key" class="btn btn-secondary btn-small">copy</button>
+          </div>
+          <div class="script-actions">
+            <button id="btn-get-script" class="btn btn-primary btn-large">generate script</button>
+            <button id="btn-copy-script" class="btn btn-accent btn-large hidden">copy to clipboard</button>
+          </div>
+          <div id="script-preview-area" class="hidden">
+            <textarea id="script-preview" spellcheck="false" readonly></textarea>
+          </div>
         </div>
       </div>
     </main>
