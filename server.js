@@ -13,7 +13,11 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
+const wss = new WebSocket.Server({ 
+  noServer: true,
+  clientTracking: true,
+  perMessageDeflate: false // Disable compression for better performance with small messages
+});
 
 // Configuration
 const PORT = process.env.PORT || 3000;
@@ -547,11 +551,58 @@ wss.on('connection', (ws, request, username) => {
   }
   clientConnections.get(username).add(ws);
 
-  // Do not send any config or status on connect.
-  // Configuration is only sent when the user triggers activation.
+  // Send initial config immediately
+  const db = readLocalDB();
+  const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+  
+  if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'init',
+      config: localUser.config
+    }));
+    console.log(`Sent initial config to ${username}`);
+  }
+
+  // Set up ping/pong keepalive to prevent timeout (every 30 seconds)
+  const pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 30000);
+
+  // Handle pong responses
+  ws.on('pong', () => {
+    console.log(`Received pong from ${username}`);
+  });
+
+  // Handle incoming messages from Roblox client
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      console.log(`Message from ${username}:`, message);
+      
+      // If client requests config refresh
+      if (message.type === 'request_config') {
+        const db = readLocalDB();
+        const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (user && user.config && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'update',
+            config: user.config
+          }));
+          console.log(`Sent config refresh to ${username}`);
+        }
+      }
+    } catch (err) {
+      console.error(`Error parsing message from ${username}:`, err);
+    }
+  });
 
   ws.on('close', () => {
     console.log(`WebSocket client disconnected for user: ${username}`);
+    clearInterval(pingInterval);
     const userConns = clientConnections.get(username);
     if (userConns) {
       userConns.delete(ws);
@@ -563,6 +614,7 @@ wss.on('connection', (ws, request, username) => {
 
   ws.on('error', (err) => {
     console.error(`WebSocket error for ${username}:`, err);
+    clearInterval(pingInterval);
   });
 });
 
@@ -570,15 +622,44 @@ wss.on('connection', (ws, request, username) => {
 function broadcastConfigUpdate(username, config) {
   const userConns = clientConnections.get(username);
   let count = 0;
+  let failedCount = 0;
+  
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
+    const deadConnections = [];
+    
     userConns.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(payload);
-        count++;
+        try {
+          ws.send(payload, (err) => {
+            if (err) {
+              console.error(`Failed to send config update to ${username}:`, err);
+              failedCount++;
+            } else {
+              console.log(`Successfully sent config update to ${username}`);
+            }
+          });
+          count++;
+        } catch (err) {
+          console.error(`Exception sending config update to ${username}:`, err);
+          failedCount++;
+          deadConnections.push(ws);
+        }
+      } else {
+        console.log(`Removing dead connection for ${username} (readyState: ${ws.readyState})`);
+        deadConnections.push(ws);
       }
     });
+    
+    // Clean up dead connections
+    deadConnections.forEach(ws => userConns.delete(ws));
+    
+    if (userConns.size === 0) {
+      clientConnections.delete(username);
+    }
   }
+  
+  console.log(`[Activation] ${username}: sent config update to ${count} connection(s), ${failedCount} failed.`);
   return count;
 }
 
