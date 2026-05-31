@@ -24,23 +24,84 @@ document.addEventListener('DOMContentLoaded', () => {
   const authToast = document.getElementById('auth-toast');
   const phraseDisplay = document.getElementById('phrase-display');
 
+  // Settings modal elements
+  const settingsModal = document.getElementById('settings-modal');
+  const btnCloseSettings = document.getElementById('btn-close-settings');
+  const btnSaveSettings = document.getElementById('btn-save-settings');
+  const settingLogoUrl = document.getElementById('setting-logo-url');
+  const logoImg = document.getElementById('logo-img');
+  const navLogoImg = document.getElementById('nav-logo-img');
+
   let activeSessionToken = null;
   let connectionCheckInterval = null;
 
   // --- Branding Logo Management ---
   function applyBrandingLogo() {
     const savedLogo = localStorage.getItem('sacrifice_logo_url');
-    const logoImg = document.getElementById('logo-img');
-    const navLogoImg = document.getElementById('nav-logo-img');
-    
     if (savedLogo) {
-      if (logoImg) logoImg.src = savedLogo;
-      if (navLogoImg) navLogoImg.src = savedLogo;
+      if (logoImg) {
+        logoImg.src = savedLogo;
+        logoImg.style.display = 'inline-block';
+        const fallbackText = logoImg.nextElementSibling;
+        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
+          fallbackText.style.display = 'none';
+        }
+      }
+      if (navLogoImg) {
+        navLogoImg.src = savedLogo;
+        navLogoImg.style.display = 'inline-block';
+        const fallbackText = navLogoImg.nextElementSibling;
+        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
+          fallbackText.style.display = 'none';
+        }
+      }
+      if (settingLogoUrl) {
+        settingLogoUrl.value = savedLogo;
+      }
+    } else {
+      if (logoImg) {
+        logoImg.src = 'logo.png';
+        logoImg.style.display = 'inline-block';
+      }
+      if (navLogoImg) {
+        navLogoImg.src = 'logo.png';
+        navLogoImg.style.display = 'inline-block';
+      }
     }
   }
 
   // Initial load of logo
   applyBrandingLogo();
+
+  // Settings modal interaction listeners
+  if (btnCloseSettings) {
+    btnCloseSettings.addEventListener('click', () => {
+      settingsModal.classList.add('hidden');
+    });
+  }
+
+  if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.add('hidden');
+      }
+    });
+  }
+
+  if (btnSaveSettings) {
+    btnSaveSettings.addEventListener('click', () => {
+      const url = settingLogoUrl.value.trim();
+      if (url) {
+        localStorage.setItem('sacrifice_logo_url', url);
+        showToast('Logo updated!', 'success');
+      } else {
+        localStorage.removeItem('sacrifice_logo_url');
+        showToast('Logo reset to default.', 'info');
+      }
+      applyBrandingLogo();
+      settingsModal.classList.add('hidden');
+    });
+  }
 
   // --- Auth screen toggles ---
   toSignup.addEventListener('click', (e) => {
@@ -309,8 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start background status updates
     updateConnectionStatus();
     connectionCheckInterval = setInterval(updateConnectionStatus, 15000);
-    
-    // Load a random phrase once
+    // Load a random phrase once (no manual refresh button)
     loadRandomPhrase(username);
   }
 
@@ -496,543 +556,4 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Logout connection error', 'error');
     }
   });
-
-  // --- Visual Config Editor (Config Tab) ---
-  const btnApplyConfig = document.getElementById('btn-apply-config');
-  const btnSaveVisualConfig = document.getElementById('btn-save-visual-config');
-  const btnResetConfig = document.getElementById('btn-reset-config');
-  const configStatus = document.getElementById('config-status');
-
-  // Get all config input elements
-  function getAllConfigInputs() {
-    return {
-      // Silent Aim
-      silentEnabled: document.getElementById('cfg-silent-enabled'),
-      silentHitchance: document.getElementById('cfg-silent-hitchance'),
-      silentFov: document.getElementById('cfg-silent-fov'),
-      silentFovVisible: document.getElementById('cfg-silent-fov-visible'),
-      silentHitpart: document.getElementById('cfg-silent-hitpart'),
-      silentSmoothing: document.getElementById('cfg-silent-smoothing'),
-      
-      // Camlock
-      camlockEnabled: document.getElementById('cfg-camlock-enabled'),
-      camlockKeybind: document.getElementById('cfg-camlock-keybind'),
-      camlockBlend: document.getElementById('cfg-camlock-blend'),
-      camlockPredx: document.getElementById('cfg-camlock-predx'),
-      camlockPredy: document.getElementById('cfg-camlock-predy'),
-      camlockPredz: document.getElementById('cfg-camlock-predz'),
-      camlockHitpart: document.getElementById('cfg-camlock-hitpart'),
-      camlockShake: document.getElementById('cfg-camlock-shake'),
-      camlockShakex: document.getElementById('cfg-camlock-shakex'),
-      camlockShakey: document.getElementById('cfg-camlock-shakey'),
-      
-      // Trigger Bot
-      triggerEnabled: document.getElementById('cfg-trigger-enabled'),
-      triggerKeybind: document.getElementById('cfg-trigger-keybind'),
-      triggerDelay: document.getElementById('cfg-trigger-delay'),
-      
-      // Visuals
-      espEnabled: document.getElementById('cfg-esp-enabled'),
-      espKeybind: document.getElementById('cfg-esp-keybind'),
-      espSize: document.getElementById('cfg-esp-size'),
-      watermarkEnabled: document.getElementById('cfg-watermark-enabled'),
-      skyEnabled: document.getElementById('cfg-sky-enabled'),
-      
-      // Speed & Movement
-      speedEnabled: document.getElementById('cfg-speed-enabled'),
-      speedKeybind: document.getElementById('cfg-speed-keybind'),
-      speedValue: document.getElementById('cfg-speed-value'),
-      jumpEnabled: document.getElementById('cfg-jump-enabled'),
-      jumpPower: document.getElementById('cfg-jump-power'),
-      jumpKeybind: document.getElementById('cfg-jump-keybind'),
-      spidermanEnabled: document.getElementById('cfg-spiderman-enabled'),
-      spidermanKeybind: document.getElementById('cfg-spiderman-keybind'),
-      spidermanBoost: document.getElementById('cfg-spiderman-boost'),
-      
-      // Weapon Mods
-      rapidfireEnabled: document.getElementById('cfg-rapidfire-enabled'),
-      rapidfireDelay: document.getElementById('cfg-rapidfire-delay'),
-      delayChangerEnabled: document.getElementById('cfg-delay-changer-enabled'),
-      globalDelay: document.getElementById('cfg-global-delay'),
-      hitboxEnabled: document.getElementById('cfg-hitbox-enabled'),
-      hitboxSize: document.getElementById('cfg-hitbox-size'),
-      
-      // Misc
-      wallbangEnabled: document.getElementById('cfg-wallbang-enabled'),
-      infiniterangeEnabled: document.getElementById('cfg-infiniterange-enabled'),
-      rangeValue: document.getElementById('cfg-range-value'),
-      antistompEnabled: document.getElementById('cfg-antistomp-enabled'),
-      panicgroundEnabled: document.getElementById('cfg-panicground-enabled'),
-      panicKeybind: document.getElementById('cfg-panic-keybind'),
-      globalwallcheckEnabled: document.getElementById('cfg-globalwallcheck-enabled'),
-      knockcheckEnabled: document.getElementById('cfg-knockcheck-enabled'),
-    };
-  }
-
-
-  // Parse current config from editor and populate visual editor
-  function loadVisualConfig() {
-    if (!configEditor || !configEditor.value) return;
-    
-    try {
-      const cfg = getAllConfigInputs();
-      const configText = configEditor.value;
-      
-      // Parse Silent Aim
-      cfg.silentEnabled.checked = configText.includes("['Silent Aim'] = {") && configText.includes("['Enabled'] = true");
-      const hitchanceMatch = configText.match(/HitChance\s*=\s*(\d+)/);
-      if (hitchanceMatch) cfg.silentHitchance.value = hitchanceMatch[1];
-      
-      const fovRadiusMatch = configText.match(/\['Fov'\][\s\S]*?\['Radius'\]\s*=\s*(\d+)/);
-      if (fovRadiusMatch) cfg.silentFov.value = fovRadiusMatch[1];
-      
-      const fovVisibleMatch = configText.match(/\['Fov'\][\s\S]*?\['Visible'\]\s*=\s*(true|false)/);
-      if (fovVisibleMatch) cfg.silentFovVisible.checked = fovVisibleMatch[1] === 'true';
-      
-      const silentHitpartMatch = configText.match(/HitPart\s*=\s*['"](\w+)['"]/);
-      if (silentHitpartMatch) cfg.silentHitpart.value = silentHitpartMatch[1];
-      
-      const smoothingMatch = configText.match(/Smoothing\s*=\s*([\d.]+)/);
-      if (smoothingMatch) cfg.silentSmoothing.value = smoothingMatch[1];
-      
-      // Parse Camlock
-      cfg.camlockEnabled.checked = configText.includes("['Camlock'] = {") && configText.includes("['Enabled'] = true");
-      
-      const camlockKeybindMatch = configText.match(/\['Camlock'\][\s\S]*?\['Keybind'\]\s*=\s*['"](\w)['"]/);
-      if (camlockKeybindMatch) cfg.camlockKeybind.value = camlockKeybindMatch[1];
-      
-      const blendMatch = configText.match(/\['Blend'\]\s*=\s*([\d.]+)/);
-      if (blendMatch) cfg.camlockBlend.value = blendMatch[1];
-      
-      const predMatch = configText.match(/\['Values'\]\s*=\s*\{\s*\['x'\]\s*=\s*([\d.]+),\s*\['y'\]\s*=\s*([\d.]+),\s*\['z'\]\s*=\s*([\d.]+)/);
-      if (predMatch) {
-        cfg.camlockPredx.value = predMatch[1];
-        cfg.camlockPredy.value = predMatch[2];
-        cfg.camlockPredz.value = predMatch[3];
-      }
-      
-      const camlockHitpartMatch = configText.match(/\['Camlock'\][\s\S]*?\['Part'\]\s*=\s*['"](\w+)['"]/);
-      if (camlockHitpartMatch) cfg.camlockHitpart.value = camlockHitpartMatch[1];
-      
-      const shakeMatch = configText.match(/Shake\s*=\s*\{[\s\S]*?Enabled\s*=\s*(true|false)/);
-      if (shakeMatch) cfg.camlockShake.checked = shakeMatch[1] === 'true';
-      
-      const shakexMatch = configText.match(/Shake\s*=\s*\{[\s\S]*?X\s*=\s*([\d.]+)/);
-      if (shakexMatch) cfg.camlockShakex.value = shakexMatch[1];
-      
-      const shakeyMatch = configText.match(/Shake\s*=\s*\{[\s\S]*?Y\s*=\s*([\d.]+)/);
-      if (shakeyMatch) cfg.camlockShakey.value = shakeyMatch[1];
-      
-      // Parse Trigger Bot
-      cfg.triggerEnabled.checked = configText.includes("['Trigger Bot'] = {") && configText.includes("['Enabled'] = true");
-      
-      const triggerKeybindMatch = configText.match(/\['Trigger Bot'\][\s\S]*?\['Keybind'\]\s*=\s*['"](\w)['"]/);
-      if (triggerKeybindMatch) cfg.triggerKeybind.value = triggerKeybindMatch[1];
-      
-      const triggerDelayMatch = configText.match(/\['Trigger Bot'\][\s\S]*?Delay\s*=\s*([\d.]+)/);
-      if (triggerDelayMatch) cfg.triggerDelay.value = triggerDelayMatch[1];
-      
-      // Parse Visuals
-      cfg.espEnabled.checked = configText.includes("ESP = {") && configText.includes("Enabled = true");
-      
-      const espKeybindMatch = configText.match(/ESP\s*=\s*\{[\s\S]*?Keybind\s*=\s*['"](\w)['"]/);
-      if (espKeybindMatch) cfg.espKeybind.value = espKeybindMatch[1];
-      
-      const espSizeMatch = configText.match(/ESP\s*=\s*\{[\s\S]*?Size\s*=\s*(\d+)/);
-      if (espSizeMatch) cfg.espSize.value = espSizeMatch[1];
-      
-      cfg.watermarkEnabled.checked = configText.includes("Watermark = {") && configText.includes("Enabled = true");
-      cfg.skyEnabled.checked = configText.includes("Sky = {") && configText.includes("Enabled = true");
-      
-      // Parse Speed & Movement
-      cfg.speedEnabled.checked = configText.includes("['Speed Modifications']") && configText.includes("Enabled = true");
-      
-      const speedKeybindMatch = configText.match(/\['Speed Modifications'\][\s\S]*?Keybind\s*=\s*['"](\w)['"]/);
-      if (speedKeybindMatch) cfg.speedKeybind.value = speedKeybindMatch[1];
-      
-      const speedValueMatch = configText.match(/DefaultSpeed\s*=\s*(\d+)/);
-      if (speedValueMatch) cfg.speedValue.value = speedValueMatch[1];
-      
-      cfg.jumpEnabled.checked = configText.includes("['Jump Modifications']") && configText.includes("Enabled = true");
-      
-      const jumpPowerMatch = configText.match(/JumpPower\s*=\s*(\d+)/);
-      if (jumpPowerMatch) cfg.jumpPower.value = jumpPowerMatch[1];
-      
-      const jumpKeybindMatch = configText.match(/\['Jump Modifications'\][\s\S]*?Keybind\s*=\s*['"](\w)['"]/);
-      if (jumpKeybindMatch) cfg.jumpKeybind.value = jumpKeybindMatch[1];
-      
-      cfg.spidermanEnabled.checked = configText.includes("Spiderman = {") && configText.includes("Enabled = true");
-      
-      const spidermanKeybindMatch = configText.match(/Spiderman\s*=\s*\{[\s\S]*?Keybind\s*=\s*['"](\w)['"]/);
-      if (spidermanKeybindMatch) cfg.spidermanKeybind.value = spidermanKeybindMatch[1];
-      
-      const spidermanBoostMatch = configText.match(/\["Jump Boost"\]\s*=\s*(\d+)/);
-      if (spidermanBoostMatch) cfg.spidermanBoost.value = spidermanBoostMatch[1];
-      
-      // Parse Weapon Mods
-      cfg.rapidfireEnabled.checked = configText.includes("RapidFire = true");
-      
-      const rapidfireDelayMatch = configText.match(/RapidFireDelay\s*=\s*([\d.]+)/);
-      if (rapidfireDelayMatch) cfg.rapidfireDelay.value = rapidfireDelayMatch[1];
-      
-      cfg.delayChangerEnabled.checked = configText.includes('["Delay Changer"]') && configText.includes("Enabled = true");
-      
-      const globalDelayMatch = configText.match(/GlobalDelay\s*=\s*([\d.]+)/);
-      if (globalDelayMatch) cfg.globalDelay.value = globalDelayMatch[1];
-      
-      cfg.hitboxEnabled.checked = configText.includes('["Hitbox Expander"]') && configText.includes("Enabled = true");
-      
-      const hitboxSizeMatch = configText.match(/\["Hitbox Expander"\][\s\S]*?Size\s*=\s*(\d+)/);
-      if (hitboxSizeMatch) cfg.hitboxSize.value = hitboxSizeMatch[1];
-      
-      // Parse Misc
-      cfg.wallbangEnabled.checked = configText.includes('["Wallbang"]') && configText.includes("Enabled = true");
-      cfg.infiniterangeEnabled.checked = configText.includes('["Infinite Range"]') && configText.includes("Enabled = true");
-      
-      const rangeValueMatch = configText.match(/\["Infinite Range"\][\s\S]*?Range\s*=\s*(\d+)/);
-      if (rangeValueMatch) cfg.rangeValue.value = rangeValueMatch[1];
-      
-      cfg.antistompEnabled.checked = configText.includes("AntiStomp = {") && configText.includes("Enabled = true");
-      cfg.panicgroundEnabled.checked = configText.includes('["Panic Ground"]') && configText.includes("Enabled = true");
-      
-      const panicKeybindMatch = configText.match(/\["Panic Ground"\][\s\S]*?Keybind\s*=\s*['"](\w)['"]/);
-      if (panicKeybindMatch) cfg.panicKeybind.value = panicKeybindMatch[1];
-      
-      cfg.globalwallcheckEnabled.checked = configText.includes('["Global WallCheck"] = true');
-      cfg.knockcheckEnabled.checked = configText.includes('["Knock Check"] = true');
-      
-      if (configStatus) configStatus.textContent = 'loaded from editor';
-      showToast('Visual config loaded from editor', 'info');
-    } catch (err) {
-      console.error('Failed to parse config:', err);
-      showToast('Failed to parse config for visual editor', 'error');
-    }
-  }
-
-
-  // Apply visual config changes back to the text editor
-  function applyVisualConfigToEditor() {
-    try {
-      const cfg = getAllConfigInputs();
-      let configText = configEditor.value;
-      
-      // Update Silent Aim
-      configText = configText.replace(
-        /(Silent Aim.*?\['Enabled'\]\s*=\s*)(true|false)/s,
-        `$1${cfg.silentEnabled.checked}`
-      );
-      configText = configText.replace(
-        /HitChance\s*=\s*\d+/g,
-        `HitChance = ${cfg.silentHitchance.value}`
-      );
-      configText = configText.replace(
-        /(\['Fov'\][\s\S]*?\['Radius'\]\s*=\s*)\d+/,
-        `$1${cfg.silentFov.value}`
-      );
-      configText = configText.replace(
-        /(\['Fov'\][\s\S]*?\['Visible'\]\s*=\s*)(true|false)/,
-        `$1${cfg.silentFovVisible.checked}`
-      );
-      configText = configText.replace(
-        /(HitPart\s*=\s*)['"](\w+)['"]/,
-        `$1"${cfg.silentHitpart.value}"`
-      );
-      configText = configText.replace(
-        /(Smoothing\s*=\s*)[\d.]+/,
-        `$1${cfg.silentSmoothing.value}`
-      );
-      
-      // Update Camlock
-      configText = configText.replace(
-        /(\['Camlock'\][\s\S]*?\['Enabled'\]\s*=\s*)(true|false)/,
-        `$1${cfg.camlockEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\['Camlock'\][\s\S]*?\['Keybind'\]\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.camlockKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(\['Blend'\]\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockBlend.value}`
-      );
-      configText = configText.replace(
-        /(\['Values'\]\s*=\s*\{\s*\['x'\]\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockPredx.value}`
-      );
-      configText = configText.replace(
-        /(\['Values'\]\s*=\s*\{[^}]*\['y'\]\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockPredy.value}`
-      );
-      configText = configText.replace(
-        /(\['Values'\]\s*=\s*\{[^}]*\['z'\]\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockPredz.value}`
-      );
-      configText = configText.replace(
-        /(\['Camlock'\][\s\S]*?\['Part'\]\s*=\s*)['"](\w+)['"]/,
-        `$1"${cfg.camlockHitpart.value}"`
-      );
-      configText = configText.replace(
-        /(Shake\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.camlockShake.checked}`
-      );
-      configText = configText.replace(
-        /(Shake\s*=\s*\{[\s\S]*?X\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockShakex.value}`
-      );
-      configText = configText.replace(
-        /(Shake\s*=\s*\{[\s\S]*?Y\s*=\s*)[\d.]+/,
-        `$1${cfg.camlockShakey.value}`
-      );
-      
-      // Update Trigger Bot
-      configText = configText.replace(
-        /(\['Trigger Bot'\][\s\S]*?\['Enabled'\]\s*=\s*)(true|false)/,
-        `$1${cfg.triggerEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\['Trigger Bot'\][\s\S]*?\['Keybind'\]\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.triggerKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(\['Trigger Bot'\][\s\S]*?Delay\s*=\s*)[\d.]+/,
-        `$1${cfg.triggerDelay.value}`
-      );
-      
-      // Update Visuals
-      configText = configText.replace(
-        /(ESP\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.espEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(ESP\s*=\s*\{[\s\S]*?Keybind\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.espKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(ESP\s*=\s*\{[\s\S]*?Size\s*=\s*)\d+/,
-        `$1${cfg.espSize.value}`
-      );
-      configText = configText.replace(
-        /(Watermark\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.watermarkEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(Sky\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.skyEnabled.checked}`
-      );
-      
-      // Update Speed & Movement
-      configText = configText.replace(
-        /(\["Speed Modifications"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.speedEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Speed Modifications"\][\s\S]*?Keybind\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.speedKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(DefaultSpeed\s*=\s*)\d+/,
-        `$1${cfg.speedValue.value}`
-      );
-      configText = configText.replace(
-        /(\["Jump Modifications"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.jumpEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(JumpPower\s*=\s*)\d+/,
-        `$1${cfg.jumpPower.value}`
-      );
-      configText = configText.replace(
-        /(\["Jump Modifications"\][\s\S]*?Keybind\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.jumpKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(Spiderman\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.spidermanEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(Spiderman\s*=\s*\{[\s\S]*?Keybind\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.spidermanKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(\["Jump Boost"\]\s*=\s*)\d+/,
-        `$1${cfg.spidermanBoost.value}`
-      );
-      
-      // Update Weapon Mods
-      configText = configText.replace(
-        /(RapidFire\s*=\s*)(true|false)/,
-        `$1${cfg.rapidfireEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(RapidFireDelay\s*=\s*)[\d.]+/,
-        `$1${cfg.rapidfireDelay.value}`
-      );
-      configText = configText.replace(
-        /(\["Delay Changer"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.delayChangerEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(GlobalDelay\s*=\s*)[\d.]+/,
-        `$1${cfg.globalDelay.value}`
-      );
-      configText = configText.replace(
-        /(\["Hitbox Expander"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.hitboxEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Hitbox Expander"\][\s\S]*?Size\s*=\s*)\d+/,
-        `$1${cfg.hitboxSize.value}`
-      );
-      
-      // Update Misc
-      configText = configText.replace(
-        /(\["Wallbang"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.wallbangEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Infinite Range"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.infiniterangeEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Infinite Range"\][\s\S]*?Range\s*=\s*)\d+/,
-        `$1${cfg.rangeValue.value}`
-      );
-      configText = configText.replace(
-        /(AntiStomp\s*=\s*\{[\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.antistompEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Panic Ground"\][\s\S]*?Enabled\s*=\s*)(true|false)/,
-        `$1${cfg.panicgroundEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Panic Ground"\][\s\S]*?Keybind\s*=\s*)['"](\w)['"]/,
-        `$1"${cfg.panicKeybind.value}"`
-      );
-      configText = configText.replace(
-        /(\["Global WallCheck"\]\s*=\s*)(true|false)/,
-        `$1${cfg.globalwallcheckEnabled.checked}`
-      );
-      configText = configText.replace(
-        /(\["Knock Check"\]\s*=\s*)(true|false)/,
-        `$1${cfg.knockcheckEnabled.checked}`
-      );
-      
-      configEditor.value = configText;
-      saveStatus.textContent = 'Modified (unsaved)';
-      if (configStatus) configStatus.textContent = 'applied to editor';
-      showToast('Visual changes applied to editor!', 'success');
-      return true;
-    } catch (err) {
-      console.error('Failed to apply visual config:', err);
-      showToast('Failed to apply visual config changes', 'error');
-      return false;
-    }
-  }
-
-  // Apply visual config and save to cloud
-  async function applyAndSaveVisualConfig() {
-    if (configStatus) configStatus.textContent = 'applying...';
-    
-    // First apply to editor
-    const applied = applyVisualConfigToEditor();
-    if (!applied) return;
-    
-    // Then save to cloud
-    const configData = configEditor.value;
-    
-    try {
-      const response = await fetch('/api/config/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config: configData })
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        saveStatus.textContent = 'All changes saved to cloud';
-        if (configStatus) configStatus.textContent = 'saved to cloud';
-        showToast('Config applied and saved to cloud!', 'success');
-      } else {
-        showToast(result.error || 'Failed to save configuration', 'error');
-        if (configStatus) configStatus.textContent = 'save failed';
-      }
-    } catch (err) {
-      showToast('Connection error during configuration save', 'error');
-      if (configStatus) configStatus.textContent = 'connection error';
-    }
-  }
-
-  // Apply button - just updates the editor
-  if (btnApplyConfig) {
-    btnApplyConfig.addEventListener('click', applyVisualConfigToEditor);
-  }
-
-  // Save button - applies AND saves to cloud
-  if (btnSaveVisualConfig) {
-    btnSaveVisualConfig.addEventListener('click', applyAndSaveVisualConfig);
-  }
-
-
-  if (btnResetConfig) {
-    btnResetConfig.addEventListener('click', () => {
-      if (confirm('Reset all visual config values to defaults?')) {
-        const cfg = getAllConfigInputs();
-        
-        // Reset Silent Aim
-        cfg.silentEnabled.checked = true;
-        cfg.silentHitchance.value = 100;
-        cfg.silentFov.value = 350;
-        cfg.silentFovVisible.checked = false;
-        cfg.silentHitpart.value = 'Closest';
-        cfg.silentSmoothing.value = 0.1;
-        
-        // Reset Camlock
-        cfg.camlockEnabled.checked = true;
-        cfg.camlockKeybind.value = 'Q';
-        cfg.camlockBlend.value = 0.17;
-        cfg.camlockPredx.value = 0.125;
-        cfg.camlockPredy.value = 0.225;
-        cfg.camlockPredz.value = 0.125;
-        cfg.camlockHitpart.value = 'UpperTorso';
-        cfg.camlockShake.checked = true;
-        cfg.camlockShakex.value = 0.5;
-        cfg.camlockShakey.value = 0.5;
-        
-        // Reset Trigger Bot
-        cfg.triggerEnabled.checked = true;
-        cfg.triggerKeybind.value = 'T';
-        cfg.triggerDelay.value = 0.01;
-        
-        // Reset Visuals
-        cfg.espEnabled.checked = true;
-        cfg.espKeybind.value = 'B';
-        cfg.espSize.value = 11;
-        cfg.watermarkEnabled.checked = false;
-        cfg.skyEnabled.checked = true;
-        
-        // Reset Speed & Movement
-        cfg.speedEnabled.checked = true;
-        cfg.speedKeybind.value = 'V';
-        cfg.speedValue.value = 835;
-        cfg.jumpEnabled.checked = false;
-        cfg.jumpPower.value = 60;
-        cfg.jumpKeybind.value = 'H';
-        cfg.spidermanEnabled.checked = true;
-        cfg.spidermanKeybind.value = 'J';
-        cfg.spidermanBoost.value = 80;
-        
-        // Reset Weapon Mods
-        cfg.rapidfireEnabled.checked = true;
-        cfg.rapidfireDelay.value = 0.15;
-        cfg.delayChangerEnabled.checked = true;
-        cfg.globalDelay.value = 0.08;
-        cfg.hitboxEnabled.checked = false;
-        cfg.hitboxSize.value = 110;
-        
-        // Reset Misc
-        cfg.wallbangEnabled.checked = true;
-        cfg.infiniterangeEnabled.checked = true;
-        cfg.rangeValue.value = 2000;
-        cfg.antistompEnabled.checked = false;
-        cfg.panicgroundEnabled.checked = true;
+});
