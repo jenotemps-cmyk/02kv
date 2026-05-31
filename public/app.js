@@ -11,8 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Display variables
   const userDisplay = document.getElementById('user-display');
-  const wsUriDisplay = document.getElementById('ws-uri-display');
-  const httpUriDisplay = document.getElementById('http-uri-display');
   const configEditor = document.getElementById('config-editor');
   const saveStatus = document.getElementById('save-status');
   const statusDot = document.getElementById('status-dot');
@@ -20,8 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Interactive buttons
   const btnLogout = document.getElementById('btn-logout');
-  const btnCopyWs = document.getElementById('btn-copy-ws');
-  const btnCopyHttp = document.getElementById('btn-copy-http');
   const btnLoad = document.getElementById('btn-load');
   const btnSave = document.getElementById('btn-save');
   const btnActivate = document.getElementById('btn-activate');
@@ -29,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const phraseDisplay = document.getElementById('phrase-display');
 
   // Settings modal elements
-  const btnSettings = document.getElementById('btn-settings');
   const settingsModal = document.getElementById('settings-modal');
   const btnCloseSettings = document.getElementById('btn-close-settings');
   const btnSaveSettings = document.getElementById('btn-save-settings');
@@ -42,9 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Branding Logo Management ---
   function applyBrandingLogo() {
-    const savedLogo = localStorage.getItem('perc_logo_url');
+    const savedLogo = localStorage.getItem('sacrifice_logo_url');
     if (savedLogo) {
-      // Apply to Auth Logo
       if (logoImg) {
         logoImg.src = savedLogo;
         logoImg.style.display = 'inline-block';
@@ -53,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
           fallbackText.style.display = 'none';
         }
       }
-      // Apply to Navbar Logo
       if (navLogoImg) {
         navLogoImg.src = savedLogo;
         navLogoImg.style.display = 'inline-block';
@@ -66,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
         settingLogoUrl.value = savedLogo;
       }
     } else {
-      // Default logo file
       if (logoImg) {
         logoImg.src = 'logo.png';
         logoImg.style.display = 'inline-block';
@@ -82,14 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
   applyBrandingLogo();
 
   // Settings modal interaction listeners
-  if (btnSettings) {
-    btnSettings.addEventListener('click', () => {
-      const savedLogo = localStorage.getItem('perc_logo_url') || '';
-      settingLogoUrl.value = savedLogo;
-      settingsModal.classList.remove('hidden');
-    });
-  }
-
   if (btnCloseSettings) {
     btnCloseSettings.addEventListener('click', () => {
       settingsModal.classList.add('hidden');
@@ -108,10 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSaveSettings.addEventListener('click', () => {
       const url = settingLogoUrl.value.trim();
       if (url) {
-        localStorage.setItem('perc_logo_url', url);
-        showToast('Branding logo custom image applied!', 'success');
+        localStorage.setItem('sacrifice_logo_url', url);
+        showToast('Logo updated!', 'success');
       } else {
-        localStorage.removeItem('perc_logo_url');
+        localStorage.removeItem('sacrifice_logo_url');
         showToast('Logo reset to default.', 'info');
       }
       applyBrandingLogo();
@@ -359,15 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
     
-    // Construct the websocket connection URI representation
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUri = `${protocol}//${window.location.host}?token=${activeSessionToken}`;
-    if (wsUriDisplay) wsUriDisplay.textContent = wsUri;
-
-    const httpProtocol = window.location.protocol;
-    const httpUri = `${httpProtocol}//${window.location.host}?token=${activeSessionToken}`;
-    if (httpUriDisplay) httpUriDisplay.textContent = httpUri;
-
     // Load user's configuration
     loadConfig();
 
@@ -399,26 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Check session status on load
   checkSession();
-
-  // Copy websocket URI to clipboard
-  if (btnCopyWs) {
-    btnCopyWs.addEventListener('click', () => {
-      const text = wsUriDisplay ? wsUriDisplay.textContent : '';
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('Websocket URI copied to clipboard!', 'success'))
-        .catch(() => showToast('Failed to copy to clipboard', 'error'));
-    });
-  }
-
-  // Copy http URI to clipboard
-  if (btnCopyHttp) {
-    btnCopyHttp.addEventListener('click', () => {
-      const text = httpUriDisplay ? httpUriDisplay.textContent : '';
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('HTTP URI copied to clipboard!', 'success'))
-        .catch(() => showToast('Failed to copy to clipboard', 'error'));
-    });
-  }
 
   // Action listeners
   btnLoad.addEventListener('click', loadConfig);
