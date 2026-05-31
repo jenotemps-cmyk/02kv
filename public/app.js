@@ -281,6 +281,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById(`tab-${targetTab}`).classList.add('active');
       });
     });
+
+    // Config sub-tab switching
+    const configSubTabs = document.querySelectorAll('.config-sub-tab');
+    const configSubContents = document.querySelectorAll('.config-sub-content');
+    
+    configSubTabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.dataset.configTab;
+        
+        // Remove active from all sub-tabs
+        configSubTabs.forEach(b => b.classList.remove('active'));
+        configSubContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active to clicked sub-tab
+        btn.classList.add('active');
+        document.getElementById(`config-${targetTab}`).classList.add('active');
+      });
+    });
     
     // Load user's configuration
     loadConfig();
@@ -1018,21 +1036,3 @@ document.addEventListener('DOMContentLoaded', () => {
         cfg.rangeValue.value = 2000;
         cfg.antistompEnabled.checked = false;
         cfg.panicgroundEnabled.checked = true;
-        cfg.panicKeybind.value = 'P';
-        cfg.globalwallcheckEnabled.checked = true;
-        cfg.knockcheckEnabled.checked = true;
-        
-        if (configStatus) configStatus.textContent = 'reset to defaults';
-        showToast('Visual config reset to defaults', 'info');
-      }
-    });
-  }
-
-  // Load visual config when switching to config tab
-  const configTabBtn = document.querySelector('[data-tab="config"]');
-  if (configTabBtn) {
-    configTabBtn.addEventListener('click', () => {
-      setTimeout(loadVisualConfig, 100);
-    });
-  }
-});
