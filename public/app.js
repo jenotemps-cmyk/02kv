@@ -3,24 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const authContainer = document.getElementById('auth-container');
   const dashboardContainer = document.getElementById('dashboard-container');
   
-  // Tab switching
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-  
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.dataset.tab;
-      
-      // Remove active from all tabs
-      tabBtns.forEach(b => b.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      // Add active to clicked tab
-      btn.classList.add('active');
-      document.getElementById(`tab-${targetTab}`).classList.add('active');
-    });
-  });
-  
   // Form toggles
   const toSignup = document.getElementById('to-signup');
   const toLogin = document.getElementById('to-login');
@@ -358,6 +340,24 @@ document.addEventListener('DOMContentLoaded', () => {
     dashboardContainer.classList.remove('hidden');
 
     userDisplay.textContent = `User: ${username}`;
+    
+    // Tab switching (initialize after dashboard is visible)
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTab = btn.dataset.tab;
+        
+        // Remove active from all tabs
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        
+        // Add active to clicked tab
+        btn.classList.add('active');
+        document.getElementById(`tab-${targetTab}`).classList.add('active');
+      });
+    });
     
     // Construct the websocket connection URI representation
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -743,7 +743,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Load visual config when switching to config tab
-  document.querySelector('[data-tab="config"]').addEventListener('click', () => {
-    setTimeout(loadVisualConfig, 100);
-  });
+  const configTabBtn = document.querySelector('[data-tab="config"]');
+  if (configTabBtn) {
+    configTabBtn.addEventListener('click', () => {
+      setTimeout(loadVisualConfig, 100);
+    });
+  }
 });
