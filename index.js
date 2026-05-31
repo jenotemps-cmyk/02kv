@@ -1022,13 +1022,13 @@ app.get('/api/script', authenticateToken, (req, res) => {
   const wsUrl = `${wsProtocol}://${host}?token=${token}`;
 
   // The main script source URL (configurable via env or default)
-  const scriptUrl = process.env.SCRIPT_URL || 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
+  const scriptUrl = process.env.SCRIPT_URL || '';
 
   const loaderScript = `-- Sacrifice Cloud Config Loader | ${username}
 -- Paste into your executor
 
 local WS_URL = "${wsUrl}"
-local SRC_URL = "${scriptUrl}"
+local MAIN_SCRIPT_URL = "${scriptUrl}" -- Leave empty to only load config
 
 -- Configuration
 local CONNECT_TIMEOUT = 10
@@ -1221,35 +1221,56 @@ local function main()
     -- Start connection
     connect()
     
-    -- Wait for config to load
+    -- Wait for config to load (MUST complete before loading main script)
     local timeout = tick() + CONNECT_TIMEOUT
     while not configLoaded and tick() < timeout do
         task.wait(0.5)
     end
     
     if not configLoaded then
-        notify("Sacrifice", "Config timeout - loading script", 7)
-        log("Timeout waiting for configuration. Loading script anyway...")
+        notify("Sacrifice", "Config timeout", 7)
+        log("ERROR: Timeout waiting for configuration. Cannot load main script without config!")
+        return -- Don't load main script if config failed
     else
-        log("=== Configuration loaded and ready! ===")
+        log("=== Configuration loaded successfully! ===")
+        notify("Sacrifice", "Config loaded!", 2)
     end
     
-    -- Execute the main script
-    log("Loading main script...")
-    local srcOk, srcErr = pcall(function()
-        loadstring(game:HttpGet(SRC_URL))()
-    end)
+    -- Small delay to ensure config is fully applied
+    task.wait(0.5)
     
-    if not srcOk then
-        local errMsg = tostring(srcErr)
-        if #errMsg > 80 then
-            errMsg = errMsg:sub(1, 80) .. "..."
+    -- Verify the config table exists before loading main script
+    if not getgenv().sacrifice then
+        log("ERROR: Config table not found in getgenv().sacrifice!")
+        notify("Sacrifice", "Config table missing!", 7)
+        return
+    end
+    
+    log("Config table verified: getgenv().sacrifice exists")
+    
+    -- Load main script if URL is provided (config is now guaranteed to exist)
+    if MAIN_SCRIPT_URL and MAIN_SCRIPT_URL ~= "" then
+        log("Loading main script from: " .. MAIN_SCRIPT_URL)
+        notify("Sacrifice", "Loading script...", 2)
+        
+        local srcOk, srcErr = pcall(function()
+            loadstring(game:HttpGet(MAIN_SCRIPT_URL))()
+        end)
+        
+        if not srcOk then
+            local errMsg = tostring(srcErr)
+            if #errMsg > 80 then
+                errMsg = errMsg:sub(1, 80) .. "..."
+            end
+            warn("[Sacrifice] Script error: " .. tostring(srcErr))
+            notify("Sacrifice", "Script error: " .. errMsg, 7)
+        else
+            log("Main script loaded successfully!")
+            notify("Sacrifice", "Script loaded!", 3)
         end
-        warn("[Sacrifice] Script error: " .. tostring(srcErr))
-        notify("Sacrifice", "Script error: " .. errMsg, 7)
     else
-        log("Main script loaded successfully!")
-        notify("Sacrifice", "Script loaded!")
+        log("No main script URL provided - config only mode")
+        notify("Sacrifice", "Config ready!", 3)
     end
     
     -- Keep WS alive for live config updates
