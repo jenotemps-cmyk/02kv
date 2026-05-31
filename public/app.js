@@ -24,84 +24,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const authToast = document.getElementById('auth-toast');
   const phraseDisplay = document.getElementById('phrase-display');
 
-  // Settings modal elements
-  const settingsModal = document.getElementById('settings-modal');
-  const btnCloseSettings = document.getElementById('btn-close-settings');
-  const btnSaveSettings = document.getElementById('btn-save-settings');
-  const settingLogoUrl = document.getElementById('setting-logo-url');
-  const logoImg = document.getElementById('logo-img');
-  const navLogoImg = document.getElementById('nav-logo-img');
-
   let activeSessionToken = null;
   let connectionCheckInterval = null;
 
   // --- Branding Logo Management ---
   function applyBrandingLogo() {
     const savedLogo = localStorage.getItem('sacrifice_logo_url');
+    const logoImg = document.getElementById('logo-img');
+    const navLogoImg = document.getElementById('nav-logo-img');
+    
     if (savedLogo) {
-      if (logoImg) {
-        logoImg.src = savedLogo;
-        logoImg.style.display = 'inline-block';
-        const fallbackText = logoImg.nextElementSibling;
-        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
-          fallbackText.style.display = 'none';
-        }
-      }
-      if (navLogoImg) {
-        navLogoImg.src = savedLogo;
-        navLogoImg.style.display = 'inline-block';
-        const fallbackText = navLogoImg.nextElementSibling;
-        if (fallbackText && fallbackText.classList.contains('logo-fallback-text')) {
-          fallbackText.style.display = 'none';
-        }
-      }
-      if (settingLogoUrl) {
-        settingLogoUrl.value = savedLogo;
-      }
-    } else {
-      if (logoImg) {
-        logoImg.src = 'logo.png';
-        logoImg.style.display = 'inline-block';
-      }
-      if (navLogoImg) {
-        navLogoImg.src = 'logo.png';
-        navLogoImg.style.display = 'inline-block';
-      }
+      if (logoImg) logoImg.src = savedLogo;
+      if (navLogoImg) navLogoImg.src = savedLogo;
     }
   }
 
   // Initial load of logo
   applyBrandingLogo();
-
-  // Settings modal interaction listeners
-  if (btnCloseSettings) {
-    btnCloseSettings.addEventListener('click', () => {
-      settingsModal.classList.add('hidden');
-    });
-  }
-
-  if (settingsModal) {
-    settingsModal.addEventListener('click', (e) => {
-      if (e.target === settingsModal) {
-        settingsModal.classList.add('hidden');
-      }
-    });
-  }
-
-  if (btnSaveSettings) {
-    btnSaveSettings.addEventListener('click', () => {
-      const url = settingLogoUrl.value.trim();
-      if (url) {
-        localStorage.setItem('sacrifice_logo_url', url);
-        showToast('Logo updated!', 'success');
-      } else {
-        localStorage.removeItem('sacrifice_logo_url');
-        showToast('Logo reset to default.', 'info');
-      }
-      applyBrandingLogo();
-      settingsModal.classList.add('hidden');
-    });
-  }
 
   // --- Auth screen toggles ---
   toSignup.addEventListener('click', (e) => {
@@ -352,7 +291,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Start background status updates
     updateConnectionStatus();
     connectionCheckInterval = setInterval(updateConnectionStatus, 15000);
-    // Load a random phrase once (no manual refresh button)
+    
+    // Load a random phrase once
     loadRandomPhrase(username);
   }
 
@@ -538,7 +478,6 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Logout connection error', 'error');
     }
   });
-});
 
   // --- Visual Config Editor (Config Tab) ---
   const btnApplyConfig = document.getElementById('btn-apply-config');
