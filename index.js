@@ -13,7 +13,11 @@ require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ noServer: true });
+const wss = new WebSocket.Server({ 
+  noServer: true,
+  clientTracking: true,
+  perMessageDeflate: false // Disable compression for better performance with small messages
+});
 
 // Configuration
 const PORT = process.env.PORT || 3000;
@@ -557,6 +561,7 @@ wss.on('connection', (ws, request, username) => {
   const db = readLocalDB();
   const localUser = db.find(u => u.username.toLowerCase() === username.toLowerCase());
 
+  // Send initial config immediately
   if (localUser && localUser.config && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       type: 'init',
@@ -565,8 +570,46 @@ wss.on('connection', (ws, request, username) => {
     console.log(`Sent initial config to ${username}`);
   }
 
+  // Set up ping/pong keepalive to prevent timeout (every 30 seconds)
+  const pingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.ping();
+    } else {
+      clearInterval(pingInterval);
+    }
+  }, 30000);
+
+  // Handle pong responses
+  ws.on('pong', () => {
+    console.log(`Received pong from ${username}`);
+  });
+
+  // Handle incoming messages from Roblox client
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      console.log(`Message from ${username}:`, message);
+      
+      // If client requests config refresh
+      if (message.type === 'request_config') {
+        const db = readLocalDB();
+        const user = db.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (user && user.config && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'update',
+            config: user.config
+          }));
+          console.log(`Sent config refresh to ${username}`);
+        }
+      }
+    } catch (err) {
+      console.error(`Error parsing message from ${username}:`, err);
+    }
+  });
+
   ws.on('close', () => {
     console.log(`WebSocket client disconnected for user: ${username}`);
+    clearInterval(pingInterval);
     const userConns = clientConnections.get(connectionKey);
     if (userConns) {
       userConns.delete(ws);
@@ -578,6 +621,7 @@ wss.on('connection', (ws, request, username) => {
 
   ws.on('error', (err) => {
     console.error(`WebSocket error for ${username}:`, err);
+    clearInterval(pingInterval);
   });
 });
 // Broadcast config updates to a specific user's connected executors
@@ -585,25 +629,44 @@ function broadcastConfigUpdate(username, config) {
   const connectionKey = getConnectionKey(username);
   const userConns = clientConnections.get(connectionKey);
   let count = 0;
+  let failedCount = 0;
+  
   if (userConns && userConns.size > 0) {
     const payload = JSON.stringify({ type: 'update', config });
+    const deadConnections = [];
+    
     userConns.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {
         try {
-          ws.send(payload);
+          ws.send(payload, (err) => {
+            if (err) {
+              console.error(`Failed to send config update to ${username}:`, err);
+              failedCount++;
+            } else {
+              console.log(`Successfully sent config update to ${username}`);
+            }
+          });
           count++;
         } catch (err) {
-          console.error(`Failed to send config update to ${username}:`, err);
+          console.error(`Exception sending config update to ${username}:`, err);
+          failedCount++;
+          deadConnections.push(ws);
         }
       } else {
-        userConns.delete(ws);
+        console.log(`Removing dead connection for ${username} (readyState: ${ws.readyState})`);
+        deadConnections.push(ws);
       }
     });
+    
+    // Clean up dead connections
+    deadConnections.forEach(ws => userConns.delete(ws));
+    
     if (userConns.size === 0) {
       clientConnections.delete(connectionKey);
     }
   }
-  console.log(`[Activation] ${username}: sent config update to ${count} open WebSocket connection(s).`);
+  
+  console.log(`[Activation] ${username}: sent config update to ${count} connection(s), ${failedCount} failed.`);
   return count;
 }
 
@@ -961,11 +1024,24 @@ app.get('/api/script', authenticateToken, (req, res) => {
   // The main script source URL (configurable via env or default)
   const scriptUrl = process.env.SCRIPT_URL || 'https://vss.pandauth.com/virtual/file/68d8a1b8a2a7448c';
 
-  const loaderScript = `-- Sacrifice Loader | ${username}
+  const loaderScript = `-- Sacrifice Cloud Config Loader | ${username}
 -- Paste into your executor
 
 local WS_URL = "${wsUrl}"
 local SRC_URL = "${scriptUrl}"
+
+-- Configuration
+local CONNECT_TIMEOUT = 10
+local RECONNECT_DELAY = 5
+local MAX_RECONNECT_ATTEMPTS = 3
+local PING_INTERVAL = 25
+
+local HttpService = game:GetService("HttpService")
+local ws = nil
+local isConnected = false
+local reconnectAttempts = 0
+local lastPingTime = 0
+local configLoaded = false
 
 local function notify(title, text, dur)
     pcall(function()
@@ -975,79 +1051,207 @@ local function notify(title, text, dur)
     end)
 end
 
-local function main()
-    -- Set up WebSocket
+local function log(message)
+    print("[Sacrifice Config] " .. message)
+end
+
+local function loadConfig(configString)
+    if not configString or configString == "" then
+        log("Received empty config")
+        return false
+    end
+    
+    log("Loading configuration...")
+    
+    local success, err = pcall(function()
+        loadstring(configString)()
+    end)
+    
+    if success then
+        notify("Sacrifice", "Config loaded!")
+        log("Configuration loaded successfully!")
+        configLoaded = true
+        return true
+    else
+        notify("Sacrifice", "Config error", 5)
+        log("Failed to load configuration: " .. tostring(err))
+        return false
+    end
+end
+
+local function onMessage(message)
+    log("Received message from server")
+    
+    local success, data = pcall(function()
+        return HttpService:JSONDecode(message)
+    end)
+    
+    if not success then
+        log("Failed to parse message: " .. tostring(data))
+        return
+    end
+    
+    if data.type == "init" then
+        log("Received initial configuration")
+        loadConfig(data.config)
+    elseif data.type == "update" then
+        log("Received configuration update")
+        notify("Sacrifice", "Config updated!")
+        loadConfig(data.config)
+    elseif data.type == "pong" then
+        log("Received pong from server")
+    end
+end
+
+local function sendPing()
+    if ws and isConnected then
+        local success, err = pcall(function()
+            ws:Send(HttpService:JSONEncode({type = "ping"}))
+        end)
+        
+        if success then
+            log("Sent ping to server")
+            lastPingTime = tick()
+        else
+            log("Failed to send ping: " .. tostring(err))
+        end
+    end
+end
+
+local function requestConfigRefresh()
+    if ws and isConnected then
+        local success, err = pcall(function()
+            ws:Send(HttpService:JSONEncode({type = "request_config"}))
+        end)
+        
+        if success then
+            log("Requested config refresh")
+        else
+            log("Failed to request config: " .. tostring(err))
+        end
+    end
+end
+
+local function connect()
+    if isConnected then
+        log("Already connected")
+        return
+    end
+    
+    log("Connecting to server...")
+    notify("Sacrifice", "Connecting...")
+    
     local wsFunc = syn and syn.websocket and syn.websocket.connect
         or (WebSocket and WebSocket.connect)
         or (http and http.websocket and function(url)
             return http.websocket(url)
         end)
-
+    
     if not wsFunc then
-        notify("Sacrifice", "No WebSocket support")
+        notify("Sacrifice", "No WebSocket support", 5)
+        log("WebSocket not supported by this executor")
         return
     end
-
-    notify("Sacrifice", "Connecting...")
-
-    local ok, ws = pcall(wsFunc, WS_URL)
-    if not ok or not ws then
-        notify("Sacrifice", "Connection failed")
+    
+    local success, result = pcall(wsFunc, WS_URL)
+    
+    if not success then
+        log("Failed to create WebSocket: " .. tostring(result))
+        notify("Sacrifice", "Connection failed", 5)
+        reconnectAttempts = reconnectAttempts + 1
+        
+        if reconnectAttempts < MAX_RECONNECT_ATTEMPTS then
+            log("Retrying in " .. RECONNECT_DELAY .. " seconds... (Attempt " .. reconnectAttempts .. "/" .. MAX_RECONNECT_ATTEMPTS .. ")")
+            task.wait(RECONNECT_DELAY)
+            connect()
+        else
+            notify("Sacrifice", "Max retries reached", 7)
+            log("Max reconnection attempts reached. Please check your server and token.")
+        end
         return
     end
-
-    -- Track config state
-    local gotConfig = false
-
-    -- Attach OnMessage RIGHT AWAY before any yields
+    
+    ws = result
+    isConnected = true
+    reconnectAttempts = 0
+    log("Connected to server successfully!")
+    notify("Sacrifice", "Connected!")
+    
     ws.OnMessage:Connect(function(msg)
-        local ok2, data = pcall(function()
-            return game:GetService("HttpService"):JSONDecode(msg)
-        end)
-        if not ok2 or not data then return end
-
-        if data.type == "init" or data.type == "update" then
-            if data.config and type(data.config) == "string" then
-                gotConfig = true
-                local cfgOk, cfgErr = pcall(function() loadstring(data.config)() end)
-                if cfgOk then
-                    notify("Sacrifice", "Config loaded")
-                else
-                    warn("[Sacrifice] Config error: " .. tostring(cfgErr))
-                end
+        onMessage(msg)
+    end)
+    
+    ws.OnClose:Connect(function()
+        log("Connection closed")
+        notify("Sacrifice", "Connection closed", 5)
+        isConnected = false
+        
+        if reconnectAttempts < MAX_RECONNECT_ATTEMPTS then
+            log("Attempting to reconnect...")
+            task.wait(RECONNECT_DELAY)
+            connect()
+        end
+    end)
+    
+    -- Start ping loop
+    spawn(function()
+        while isConnected do
+            task.wait(PING_INTERVAL)
+            if isConnected then
+                sendPing()
             end
         end
     end)
-
-    ws.OnClose:Connect(function()
-        notify("Sacrifice", "WS closed")
-    end)
-
-    -- Wait for config to arrive (up to 8 sec)
-    local t = tick()
-    while not gotConfig and (tick() - t) < 8 do
-        task.wait(0.25)
+    
+    -- Wait a moment for initial config
+    task.wait(2)
+    
+    -- If no config received, request it
+    if not configLoaded then
+        log("No initial config received, requesting...")
+        requestConfigRefresh()
     end
+end
 
-    if not gotConfig then
-        notify("Sacrifice", "No config received, loading script anyway")
+local function main()
+    log("=== Sacrifice Cloud Config Loader ===")
+    log("Server: " .. WS_URL)
+    log("Starting connection...")
+    
+    -- Start connection
+    connect()
+    
+    -- Wait for config to load
+    local timeout = tick() + CONNECT_TIMEOUT
+    while not configLoaded and tick() < timeout do
+        task.wait(0.5)
     end
-
+    
+    if not configLoaded then
+        notify("Sacrifice", "Config timeout - loading script", 7)
+        log("Timeout waiting for configuration. Loading script anyway...")
+    else
+        log("=== Configuration loaded and ready! ===")
+    end
+    
     -- Execute the main script
+    log("Loading main script...")
     local srcOk, srcErr = pcall(function()
         loadstring(game:HttpGet(SRC_URL))()
     end)
-
+    
     if not srcOk then
         local errMsg = tostring(srcErr)
-        -- Truncate long errors for the notification
         if #errMsg > 80 then
             errMsg = errMsg:sub(1, 80) .. "..."
         end
         warn("[Sacrifice] Script error: " .. tostring(srcErr))
         notify("Sacrifice", "Script error: " .. errMsg, 7)
+    else
+        log("Main script loaded successfully!")
+        notify("Sacrifice", "Script loaded!")
     end
-
+    
     -- Keep WS alive for live config updates
     spawn(function()
         while true do
