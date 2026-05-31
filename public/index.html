@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sacrifice</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-additions.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- AUTH -->
+  <div id="auth-container" class="auth-wrapper">
+    <div class="glass-card auth-card">
+      <div class="logo-area">
+        <img id="logo-img" class="logo-image brand-logo" src="logo.png" alt="S" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none;">S</span>
+      </div>
+
+      <div id="auth-toast" class="toast-notification hidden"></div>
+      
+      <form id="login-form" class="auth-form">
+        <h2 class="form-title">login</h2>
+        <div class="input-group">
+          <input type="text" id="login-username" required placeholder=" ">
+          <label for="login-username">username</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="login-password" required placeholder=" ">
+          <label for="login-password">password</label>
+        </div>
+        <button type="submit" class="btn btn-primary">sign in</button>
+        <p class="toggle-text">no account? <a href="#" id="to-signup">register</a></p>
+      </form>
+
+      <form id="signup-form" class="auth-form hidden">
+        <h2 class="form-title">register</h2>
+        <div class="input-group">
+          <input type="text" id="reg-username" required placeholder=" ">
+          <label for="reg-username">username</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="reg-password" required placeholder=" ">
+          <label for="reg-password">password</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="reg-license" required placeholder=" ">
+          <label for="reg-license">license key</label>
+        </div>
+        <button type="submit" class="btn btn-primary">register</button>
+        <p class="toggle-text">got an account? <a href="#" id="to-login">sign in</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-container" class="dashboard-wrapper hidden">
+    <header class="navbar">
+      <div class="nav-logo">
+        <img id="nav-logo-img" class="logo-image nav-brand-logo" src="logo.png" alt="S" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+        <span class="logo-fallback-text" style="display:none; margin-right: 8px;">S</span>
+        <span class="brand-name">sacrifice</span>
+      </div>
+      <div class="nav-status">
+        <div class="status-indicator">
+          <span class="status-pulse green" id="status-dot"></span>
+          <span class="status-label" id="status-text">ready</span>
+        </div>
+        <div class="session-info">
+          <span id="user-display">guest</span>
+          <button id="btn-logout" class="btn btn-secondary btn-small">logout</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-content">
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button class="tab-btn active" data-tab="editor">editor</button>
+        <button class="tab-btn" data-tab="config">config</button>
+        <button class="tab-btn" data-tab="script">script</button>
+      </div>
+
+      <!-- Editor Tab -->
+      <div class="tab-content active" id="tab-editor">
+        <div class="glass-card editor-card">
+          <div class="card-header">
+            <h2>lua editor</h2>
+            <span id="save-status" class="save-status-text">draft</span>
+          </div>
+          
+          <div id="phrase-display" class="floating-phrase"></div>
+          <div class="editor-container">
+            <textarea id="config-editor" spellcheck="false" placeholder="-- paste your config here..."></textarea>
+          </div>
+
+          <div class="control-footer">
+            <div class="footer-left">
+              <button id="btn-load" class="btn btn-secondary">load</button>
+              <button id="btn-save" class="btn btn-accent">save</button>
+            </div>
+            <button id="btn-activate" class="btn btn-primary btn-large">activate</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Config Tab -->
+      <div class="tab-content" id="tab-config">
+        <div class="glass-card config-card">
+          <div class="config-header-row">
+            <div class="config-header-left">
+              <h2>visual config editor</h2>
+              <span id="config-status" class="save-status-text">ready</span>
+            </div>
+            <div class="config-actions-top">
+              <button id="btn-apply-config" class="btn btn-secondary">apply to editor</button>
+              <button id="btn-save-visual-config" class="btn btn-accent">apply & save</button>
+              <button id="btn-reset-config" class="btn btn-secondary">reset</button>
+            </div>
+          </div>
+
+          <!-- Config Sub-Tabs -->
+          <div class="config-sub-tabs">
+            <button class="config-sub-tab active" data-config-tab="silent-aim">silent aim</button>
+            <button class="config-sub-tab" data-config-tab="camlock">camlock</button>
+            <button class="config-sub-tab" data-config-tab="trigger-bot">trigger bot</button>
+            <button class="config-sub-tab" data-config-tab="visuals">visuals</button>
+            <button class="config-sub-tab" data-config-tab="movement">movement</button>
+            <button class="config-sub-tab" data-config-tab="weapon-mods">weapon mods</button>
+            <button class="config-sub-tab" data-config-tab="misc">misc</button>
+          </div>
+
+          <!-- Silent Aim Sub-Tab -->
+          <div class="config-sub-content active" id="config-silent-aim">
+            <div class="config-sections">
+            
+            <!-- Silent Aim -->
+            <div class="config-section">
+              <h3 class="section-title">silent aim</h3>
+              <div class="config-grid">
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-silent-enabled" checked>
+                    <span>enabled</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hit chance (%)</label>
+                  <input type="number" id="cfg-silent-hitchance" class="config-input" min="0" max="100" value="100">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">fov radius</label>
+                  <input type="number" id="cfg-silent-fov" class="config-input" min="0" max="1000" value="350">
+                </div>
+                <div class="config-item">
+                  <label class="config-label">
+                    <input type="checkbox" id="cfg-silent-fov-visible">
+                    <span>show fov circle</span>
+                  </label>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">hit part</label>
+                  <select id="cfg-silent-hitpart" class="config-input">
+                    <option value="Head">Head</option>
+                    <option value="UpperTorso">Upper Torso</option>
+                    <option value="LowerTorso">Lower Torso</option>
+                    <option value="Closest" selected>Closest</option>
+                  </select>
+                </div>
+                <div class="config-item">
+                  <label class="config-label">smoothing</label>
+                  <input type="number" id="cfg-silent-smoothing" class="config-input" min="0" max="1" step="0.01" value="0.1">
+                </div>
+              </div>
+            </div>
+
+            </div>
+          </div>
+
+          <!-- Camlock Sub-Tab -->
+          <div class="config-sub-content" id="config-camlock">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">basic settings</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-camlock-enabled" checked>
+                      <span>enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">keybind</label>
+                    <input type="text" id="cfg-camlock-keybind" class="config-input" value="Q" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">blend (smoothness)</label>
+                    <input type="number" id="cfg-camlock-blend" class="config-input" min="0" max="1" step="0.01" value="0.17">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">prediction x</label>
+                    <input type="number" id="cfg-camlock-predx" class="config-input" min="0" max="1" step="0.001" value="0.125">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">prediction y</label>
+                    <input type="number" id="cfg-camlock-predy" class="config-input" min="0" max="1" step="0.001" value="0.225">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">prediction z</label>
+                    <input type="number" id="cfg-camlock-predz" class="config-input" min="0" max="1" step="0.001" value="0.125">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">hit part</label>
+                    <select id="cfg-camlock-hitpart" class="config-input">
+                      <option value="Head">Head</option>
+                      <option value="UpperTorso" selected>Upper Torso</option>
+                      <option value="LowerTorso">Lower Torso</option>
+                    </select>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-camlock-shake" checked>
+                      <span>shake enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">shake x</label>
+                    <input type="number" id="cfg-camlock-shakex" class="config-input" min="0" max="5" step="0.1" value="0.5">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">shake y</label>
+                    <input type="number" id="cfg-camlock-shakey" class="config-input" min="0" max="5" step="0.1" value="0.5">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trigger Bot Sub-Tab -->
+          <div class="config-sub-content" id="config-trigger-bot">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">trigger bot settings</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-trigger-enabled" checked>
+                      <span>enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">keybind</label>
+                    <input type="text" id="cfg-trigger-keybind" class="config-input" value="T" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">delay (seconds)</label>
+                    <input type="number" id="cfg-trigger-delay" class="config-input" min="0" max="1" step="0.01" value="0.01">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visuals Sub-Tab -->
+          <div class="config-sub-content" id="config-visuals">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">visual settings</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-esp-enabled" checked>
+                      <span>esp enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">esp keybind</label>
+                    <input type="text" id="cfg-esp-keybind" class="config-input" value="B" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">esp size</label>
+                    <input type="number" id="cfg-esp-size" class="config-input" min="8" max="20" value="11">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-watermark-enabled">
+                      <span>watermark</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-sky-enabled" checked>
+                      <span>sky mod</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Movement Sub-Tab -->
+          <div class="config-sub-content" id="config-movement">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">movement settings</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-speed-enabled" checked>
+                      <span>speed enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">speed keybind</label>
+                    <input type="text" id="cfg-speed-keybind" class="config-input" value="V" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">speed value</label>
+                    <input type="number" id="cfg-speed-value" class="config-input" min="16" max="1000" value="835">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-jump-enabled">
+                      <span>jump mod enabled</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">jump power</label>
+                    <input type="number" id="cfg-jump-power" class="config-input" min="50" max="200" value="60">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">jump keybind</label>
+                    <input type="text" id="cfg-jump-keybind" class="config-input" value="H" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-spiderman-enabled" checked>
+                      <span>spiderman</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">spiderman keybind</label>
+                    <input type="text" id="cfg-spiderman-keybind" class="config-input" value="J" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">spiderman boost</label>
+                    <input type="number" id="cfg-spiderman-boost" class="config-input" min="0" max="200" value="80">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weapon Mods Sub-Tab -->
+          <div class="config-sub-content" id="config-weapon-mods">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">weapon modifications</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-rapidfire-enabled" checked>
+                      <span>rapid fire</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">rapid fire delay</label>
+                    <input type="number" id="cfg-rapidfire-delay" class="config-input" min="0" max="1" step="0.01" value="0.15">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-delay-changer-enabled" checked>
+                      <span>delay changer</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">global delay</label>
+                    <input type="number" id="cfg-global-delay" class="config-input" min="0" max="1" step="0.01" value="0.08">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-hitbox-enabled">
+                      <span>hitbox expander</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">hitbox size</label>
+                    <input type="number" id="cfg-hitbox-size" class="config-input" min="1" max="200" value="110">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Misc Sub-Tab -->
+          <div class="config-sub-content" id="config-misc">
+            <div class="config-sections">
+              <div class="config-section">
+                <h3 class="section-title">miscellaneous</h3>
+                <div class="config-grid">
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-wallbang-enabled" checked>
+                      <span>wallbang</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-infiniterange-enabled" checked>
+                      <span>infinite range</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">range value</label>
+                    <input type="number" id="cfg-range-value" class="config-input" min="100" max="5000" value="2000">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-antistomp-enabled">
+                      <span>anti stomp</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-panicground-enabled" checked>
+                      <span>panic ground</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">panic keybind</label>
+                    <input type="text" id="cfg-panic-keybind" class="config-input" value="P" maxlength="1">
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-globalwallcheck-enabled" checked>
+                      <span>global wall check</span>
+                    </label>
+                  </div>
+                  <div class="config-item">
+                    <label class="config-label">
+                      <input type="checkbox" id="cfg-knockcheck-enabled" checked>
+                      <span>knock check</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Script Tab (This is the part that got cut off) -->
+      <div class="tab-content" id="tab-script">
+        <div class="glass-card script-card">
+          <div class="card-header">
+            <h2>loader script</h2>
+          </div>
+          
+          <div style="padding: 20px;">
+            <p style="margin-bottom: 20px;">License Key: <strong id="license-key-display">Not Loaded</strong></p>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+              <button id="btn-get-script" class="btn btn-primary">Generate Script</button>
+              <button id="btn-copy-key" class="btn btn-secondary">Copy Key</button>
+            </div>
+            
+            <div id="script-preview-area" class="hidden">
+              <textarea id="script-preview" readonly style="width: 100%; height: 150px; margin-bottom: 15px; background: rgba(0,0,0,0.5); color: white; padding: 10px; font-family: monospace; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></textarea>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button id="btn-copy-script" class="btn btn-accent hidden">Copy to Clipboard</button>
+                <span id="script-status" style="font-size: 0.9em; opacity: 0.7;"></span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Settings Modal (Required by app.js) -->
+  <div id="settings-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; display: flex; align-items: center; justify-content: center;">
+    <div class="glass-card" style="padding: 30px; min-width: 300px;">
+      <h2 style="margin-bottom: 20px;">Settings</h2>
+      <div class="input-group">
+        <label>Logo URL</label>
+        <input type="text" id="setting-logo-url" style="width: 100%; padding: 10px; border-radius: 4px; border: none; margin-top: 5px;">
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+        <button id="btn-close-settings" class="btn btn-secondary">Close</button>
+        <button id="btn-save-settings" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (Required by app.js) -->
+  <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+  <!-- THIS IS THE MOST IMPORTANT LINE THAT FIXES YOUR PROBLEM: -->
+  <script src="app.js"></script>
+
+</body>
+</html>
